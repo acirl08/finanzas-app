@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   PlusCircle,
-  MessageCircle,
   Receipt,
   Settings,
   Menu,
@@ -22,7 +21,7 @@ const navItems = [
   { href: '/analisis', label: 'Análisis', icon: Sparkles },
   { href: '/gastos', label: 'Gastos', icon: Receipt },
   { href: '/registrar', label: 'Registrar', icon: PlusCircle },
-  { href: '/chat', label: 'Asistente', icon: MessageCircle },
+  { href: '/config', label: 'Config', icon: Settings },
 ];
 
 export default function Navbar() {

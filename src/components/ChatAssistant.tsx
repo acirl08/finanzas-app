@@ -50,7 +50,7 @@ export default function ChatAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: '¡Hola! 👋 Soy tu asistente financiero. Puedo ayudarte con:\n\n• Revisar si un gasto está dentro del presupuesto\n• Darte consejos sobre cómo ahorrar\n• Responder dudas sobre el plan de pago de deudas\n• Motivarte cuando lo necesites\n\n¿En qué te puedo ayudar hoy?',
+      content: '¡Hola! Soy tu asistente financiero. Puedo ayudarte con:\n\n• Revisar si un gasto está dentro del presupuesto\n• Darte consejos sobre cómo ahorrar\n• Responder dudas sobre el plan de pago de deudas\n• Motivarte cuando lo necesites\n\n¿En qué te puedo ayudar hoy?',
     },
   ]);
   const [input, setInput] = useState('');
@@ -103,17 +103,23 @@ export default function ChatAssistant() {
   };
 
   return (
-    <div className="card flex flex-col h-[600px]">
-      <div className="flex items-center gap-3 pb-4 border-b">
-        <div className="p-2 bg-purple-100 rounded-full">
-          <Bot className="w-6 h-6 text-purple-600" />
+    <div className="glass-card flex flex-col h-[600px]">
+      {/* Header */}
+      <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+          <Bot className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h2 className="font-bold">Asistente Financiero</h2>
-          <p className="text-xs text-gray-500">Powered by Claude</p>
+          <h2 className="font-bold text-white">Asistente Financiero</h2>
+          <p className="text-xs text-white/40">Powered by Claude</p>
+        </div>
+        <div className="ml-auto flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-xs text-white/40">Online</span>
         </div>
       </div>
 
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4">
         {messages.map((message, index) => (
           <div
@@ -121,61 +127,64 @@ export default function ChatAssistant() {
             className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
           >
             <div
-              className={`p-2 rounded-full h-8 w-8 flex items-center justify-center flex-shrink-0 ${
-                message.role === 'user' ? 'bg-blue-100' : 'bg-purple-100'
+              className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                message.role === 'user'
+                  ? 'bg-blue-500'
+                  : 'bg-gradient-to-br from-purple-500 to-pink-500'
               }`}
             >
               {message.role === 'user' ? (
-                <User className="w-4 h-4 text-blue-600" />
+                <User className="w-4 h-4 text-white" />
               ) : (
-                <Bot className="w-4 h-4 text-purple-600" />
+                <Bot className="w-4 h-4 text-white" />
               )}
             </div>
             <div
-              className={`rounded-2xl px-4 py-2 max-w-[80%] ${
+              className={`rounded-2xl px-4 py-3 max-w-[80%] ${
                 message.role === 'user'
                   ? 'bg-blue-500 text-white rounded-tr-sm'
-                  : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                  : 'bg-white/10 text-white rounded-tl-sm'
               }`}
             >
-              <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
             </div>
           </div>
         ))}
         {isLoading && (
           <div className="flex gap-3">
-            <div className="p-2 rounded-full h-8 w-8 flex items-center justify-center bg-purple-100">
-              <Bot className="w-4 h-4 text-purple-600" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500">
+              <Bot className="w-4 h-4 text-white" />
             </div>
-            <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3">
-              <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+            <div className="bg-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                <span className="text-sm text-white/50">Pensando...</span>
+              </div>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="pt-4 border-t">
+      {/* Input */}
+      <form onSubmit={handleSubmit} className="pt-4 border-t border-white/10">
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Escribe tu pregunta..."
-            className="input flex-1"
+            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="btn-primary px-4"
+            className="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-2 text-center">
-          Ejemplos: "¿Puedo comprar algo de $500?" • "¿Cómo vamos con las deudas?" • "Dame motivación"
-        </p>
       </form>
     </div>
   );
