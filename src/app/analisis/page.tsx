@@ -10,7 +10,6 @@ import {
   ArrowDownRight,
   MoreHorizontal,
   Info,
-  ChevronRight,
   Zap
 } from 'lucide-react';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line } from 'recharts';
@@ -379,28 +378,25 @@ export default function AnalisisPage() {
         <div className="glass-card">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-white">Deudas Detalladas</h3>
-            <button className="text-purple-400 text-sm hover:text-purple-300">
-              Ver todo
-            </button>
+            <span className="text-white/40 text-sm">{deudasIniciales.length} deudas</span>
           </div>
 
           {/* Table Header */}
-          <div className="grid grid-cols-5 gap-2 pb-3 border-b border-white/10 text-xs text-white/40">
+          <div className="grid grid-cols-4 gap-2 pb-3 border-b border-white/10 text-xs text-white/40">
             <span>Tarjeta</span>
             <span className="text-right">Saldo</span>
             <span className="text-right">CAT</span>
             <span className="text-right">Pagado %</span>
-            <span></span>
           </div>
 
           {/* Table Body */}
-          <div className="space-y-2 mt-2">
-            {deudasIniciales.slice(0, 6).map((deuda, i) => {
+          <div className="space-y-2 mt-2 max-h-[400px] overflow-y-auto">
+            {deudasIniciales.map((deuda, i) => {
               const porcentaje = ((deuda.saldoInicial - deuda.saldoActual) / deuda.saldoInicial) * 100;
               return (
-                <div key={i} className="grid grid-cols-5 gap-2 py-2 items-center text-sm hover:bg-white/5 rounded-lg px-2 -mx-2">
+                <div key={i} className="grid grid-cols-4 gap-2 py-2 items-center text-sm hover:bg-white/5 rounded-lg px-2 -mx-2">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                       deuda.cat > 100 ? 'bg-red-500' :
                       deuda.cat > 60 ? 'bg-orange-500' : 'bg-green-500'
                     }`} />
@@ -412,9 +408,6 @@ export default function AnalisisPage() {
                     deuda.cat > 60 ? 'text-orange-400' : 'text-green-400'
                   }`}>{deuda.cat}%</span>
                   <span className="text-right text-white/60">{porcentaje.toFixed(0)}%</span>
-                  <div className="flex justify-end">
-                    <ChevronRight className="w-4 h-4 text-white/30" />
-                  </div>
                 </div>
               );
             })}
