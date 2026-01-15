@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Deuda } from '@/types';
-import { deudasIniciales, calcularTotales, calcularDisponible, INGRESO_MENSUAL, suscripciones } from '@/lib/data';
+import { deudasIniciales, calcularTotales, calcularDisponible, calcularGastosFijos, INGRESO_MENSUAL, suscripciones } from '@/lib/data';
 import {
   TrendingUp,
   TrendingDown,
@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [deudas] = useState<Deuda[]>(deudasIniciales);
   const totales = calcularTotales(deudas);
   const disponible = calcularDisponible(deudas);
+  const gastosFijosTotal = calcularGastosFijos();
 
   const deudasActivas = deudas.filter(d => !d.liquidada).sort((a, b) => a.prioridad - b.prioridad);
 
@@ -93,7 +94,7 @@ export default function Dashboard() {
           <div className="glass-card">
             <p className="text-white/60 text-sm">Gastos Fijos</p>
             <p className="text-2xl font-bold text-red-400 mt-1">
-              -{formatMoney(70550)}
+              -{formatMoney(gastosFijosTotal)}
             </p>
             <p className="text-xs text-white/40 mt-1">Renta, carro, servicios, subs</p>
           </div>

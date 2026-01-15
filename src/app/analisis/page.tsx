@@ -14,7 +14,7 @@ import {
   Zap
 } from 'lucide-react';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line } from 'recharts';
-import { deudasIniciales, suscripciones, INGRESO_MENSUAL, calcularTotales } from '@/lib/data';
+import { deudasIniciales, suscripciones, INGRESO_MENSUAL, calcularTotales, calcularGastosFijos } from '@/lib/data';
 
 function formatMoney(amount: number) {
   return new Intl.NumberFormat('es-MX', {
@@ -64,6 +64,7 @@ const gastosCategoria = [
 
 export default function AnalisisPage() {
   const totales = calcularTotales(deudasIniciales);
+  const gastosFijosTotal = calcularGastosFijos();
 
   return (
     <div className="space-y-6">
@@ -329,12 +330,12 @@ export default function AnalisisPage() {
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="p-4 bg-white/5 rounded-xl">
               <p className="text-xs text-white/40 mb-1">Total gastos fijos</p>
-              <p className="text-2xl font-bold text-white">64,550</p>
+              <p className="text-2xl font-bold text-white">{formatMoney(gastosFijosTotal).replace('$', '')}</p>
               <p className="text-xs text-white/40">mensual</p>
             </div>
             <div className="p-4 bg-white/5 rounded-xl">
               <p className="text-xs text-white/40 mb-1">Ingreso</p>
-              <p className="text-2xl font-bold text-green-400">109,000</p>
+              <p className="text-2xl font-bold text-green-400">{formatMoney(INGRESO_MENSUAL).replace('$', '')}</p>
               <p className="text-xs text-white/40">mensual</p>
             </div>
           </div>
