@@ -9,14 +9,23 @@ export async function POST(request: Request) {
   try {
     const { messages, systemContext } = await request.json();
 
-    // Convertir mensajes al formato de Claude
-    const claudeMessages = messages.map((msg: any) => ({
-      role: msg.role,
-      content: msg.content,
-    }));
+    // Filtrar solo mensajes de usuario y asistente (no el mensaje inicial del sistema)
+    const claudeMessages = messages
+      .filter((msg: any) => msg.role === 'user' || msg.role === 'assistant')
+      .map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+    // Asegurar que el primer mensaje sea del usuario
+    if (claudeMessages.length === 0 || claudeMessages[0].role !== 'user') {
+      return NextResponse.json({
+        message: '¡Hola! ¿En qué te puedo ayudar con tus finanzas?'
+      });
+    }
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1024,
       system: systemContext,
       messages: claudeMessages,
@@ -27,10 +36,10 @@ export async function POST(request: Request) {
       : '';
 
     return NextResponse.json({ message: assistantMessage });
-  } catch (error) {
-    console.error('Error calling Claude API:', error);
+  } catch (error: any) {
+    console.error('Error calling Claude API:', error?.message || error);
     return NextResponse.json(
-      { error: 'Error processing request' },
+      { error: 'Error processing request', details: error?.message },
       { status: 500 }
     );
   }
