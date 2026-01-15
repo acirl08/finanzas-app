@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Deuda } from '@/types';
 import { deudasIniciales, calcularTotales, calcularDisponible, calcularGastosFijos, INGRESO_MENSUAL, suscripciones } from '@/lib/data';
 import {
@@ -33,6 +33,117 @@ function formatMoney(amount: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+// Animated number component with counting effect
+function AnimatedNumber({ value, duration = 1500, prefix = '', suffix = '', className = '' }: {
+  value: number,
+  duration?: number,
+  prefix?: string,
+  suffix?: string,
+  className?: string
+}) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+          const startTime = Date.now();
+          const startValue = 0;
+
+          const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // Easing function for smooth animation
+            const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+            const current = Math.floor(startValue + (value - startValue) * easeOutQuart);
+            setDisplayValue(current);
+
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              setDisplayValue(value);
+            }
+          };
+
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, [value, duration, hasAnimated]);
+
+  return (
+    <span ref={ref} className={className}>
+      {prefix}{formatMoney(displayValue).replace('$', '')}{suffix}
+    </span>
+  );
+}
+
+// Animated progress bar component
+function AnimatedProgress({ value, color, delay = 0 }: { value: number, color: string, delay?: number }) {
+  const [width, setWidth] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            setWidth(value);
+          }, delay);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, [value, delay]);
+
+  return (
+    <div ref={ref} className="h-full rounded-full overflow-hidden bg-[#252931]">
+      <div
+        className={`h-full rounded-full transition-all duration-1000 ease-out ${color}`}
+        style={{ width: `${width}%` }}
+      />
+    </div>
+  );
+}
+
+// Skeleton loader component
+function Skeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`animate-pulse bg-[#252931] rounded ${className}`} />
+  );
+}
+
+// Skeleton card for loading state
+function SkeletonCard() {
+  return (
+    <div className="glass-card">
+      <div className="flex items-center gap-2 mb-4">
+        <Skeleton className="w-2 h-2 rounded-full" />
+        <Skeleton className="h-4 w-32" />
+      </div>
+      <Skeleton className="h-3 w-24 mb-4" />
+      <Skeleton className="h-8 w-40 mb-2" />
+      <Skeleton className="h-4 w-20" />
+    </div>
+  );
 }
 
 // Sparkline component for mini trend charts
@@ -172,7 +283,7 @@ export default function Dashboard() {
           </div>
           <p className="text-xs text-white/60 mb-3">Suma de todas las deudas activas</p>
           <h2 className="text-4xl font-bold text-white mb-1 tracking-tight">
-            {formatMoney(totales.deudaTotal).replace('$', '')}
+            <AnimatedNumber value={totales.deudaTotal} duration={2000} className="" />
             <span className="text-2xl ml-1">$</span>
           </h2>
           <div className="flex items-center gap-2 mt-2">
@@ -266,11 +377,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="progress-bar-bg">
-            <div
-              className="progress-bar-fill progress-purple"
-              style={{ width: `${totales.porcentajePagado}%` }}
-            />
+          <div className="progress-bar-bg h-2">
+            <AnimatedProgress value={totales.porcentajePagado} color="bg-gradient-to-r from-[#7C3AED] to-[#8B5CF6]" delay={500} />
           </div>
           <div className="flex justify-between items-center mt-2">
             <p className="text-xs text-[#6B7280]">{totales.porcentajePagado.toFixed(1)}% de la meta anual</p>
@@ -626,24 +734,24 @@ export default function Dashboard() {
 
       {/* Timeline 2026 - Enhanced with area chart */}
       <div className="glass-card">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
             <Calendar className="w-5 h-5 text-[#8B5CF6]" />
             <span className="font-semibold text-white">Timeline 2026</span>
-            <span className="text-[#6B7280] text-sm">/ Libertad Financiera</span>
+            <span className="text-[#6B7280] text-sm hidden sm:inline">/ Libertad Financiera</span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="text-center sm:text-right">
               <p className="text-xs text-[#6B7280]">Meta</p>
               <p className="text-sm font-bold text-[#6EE7B7]">Dic 2026</p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-[#6B7280]">Meses restantes</p>
+            <div className="text-center sm:text-right">
+              <p className="text-xs text-[#6B7280]">Meses</p>
               <p className="text-sm font-bold text-white">11</p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-[#6B7280]">Interés ahorrado</p>
+            <div className="text-center sm:text-right">
+              <p className="text-xs text-[#6B7280]">Ahorro</p>
               <p className="text-sm font-bold text-[#6EE7B7]">~$156k</p>
             </div>
           </div>
@@ -761,10 +869,7 @@ export default function Dashboard() {
             <span className="text-[#8B5CF6] font-medium">8.3% completado</span>
           </div>
           <div className="h-2 bg-[#1C2128] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#6EE7B7]"
-              style={{ width: '8.3%' }}
-            />
+            <AnimatedProgress value={8.3} color="bg-gradient-to-r from-[#8B5CF6] to-[#6EE7B7]" delay={800} />
           </div>
         </div>
       </div>

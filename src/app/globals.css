@@ -533,3 +533,83 @@ body {
   background: rgba(139, 92, 246, 0.3);
   color: white;
 }
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .glass-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .text-hero {
+    font-size: 32px;
+  }
+
+  .balance-card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .metric-card-value {
+    font-size: 24px;
+  }
+
+  /* Hide on mobile */
+  .hide-mobile {
+    display: none;
+  }
+
+  /* Stack items on mobile */
+  .mobile-stack {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Full width on mobile */
+  .mobile-full {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .glass-card {
+    padding: 12px;
+  }
+
+  .nav-pill {
+    padding: 2px;
+  }
+
+  .nav-pill-item {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Smaller text on very small screens */
+  .text-hero {
+    font-size: 28px;
+  }
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-purple);
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
