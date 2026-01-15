@@ -82,32 +82,20 @@ export default function Dashboard() {
 
         {/* Income & Expense Cards */}
         <div className="space-y-4">
-          <div className="glass-card flex items-center justify-between">
-            <div>
-              <p className="text-white/60 text-sm">Ingreso Mensual</p>
-              <p className="text-2xl font-bold text-green-400">
-                +{formatMoney(INGRESO_MENSUAL).replace('$', '')}
-                <span className="text-lg">$</span>
-              </p>
-              <p className="text-xs text-white/40">Combinado</p>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
-              <ArrowUpRight className="w-6 h-6 text-green-400" />
-            </div>
+          <div className="glass-card">
+            <p className="text-white/60 text-sm">Ingreso Mensual</p>
+            <p className="text-2xl font-bold text-green-400 mt-1">
+              +{formatMoney(INGRESO_MENSUAL)}
+            </p>
+            <p className="text-xs text-white/40 mt-1">Combinado Ale + Ricardo</p>
           </div>
 
-          <div className="glass-card flex items-center justify-between">
-            <div>
-              <p className="text-white/60 text-sm">Gastos Fijos</p>
-              <p className="text-2xl font-bold text-red-400">
-                -{formatMoney(70550).replace('$', '')}
-                <span className="text-lg">$</span>
-              </p>
-              <p className="text-xs text-white/40">Este mes</p>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
-              <ArrowDownRight className="w-6 h-6 text-red-400" />
-            </div>
+          <div className="glass-card">
+            <p className="text-white/60 text-sm">Gastos Fijos</p>
+            <p className="text-2xl font-bold text-red-400 mt-1">
+              -{formatMoney(70550)}
+            </p>
+            <p className="text-xs text-white/40 mt-1">Renta, carro, servicios, subs</p>
           </div>
         </div>
 

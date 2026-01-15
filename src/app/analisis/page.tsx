@@ -63,7 +63,6 @@ const gastosCategoria = [
 ];
 
 export default function AnalisisPage() {
-  const [periodoSeleccionado, setPeriodoSeleccionado] = useState('2026');
   const totales = calcularTotales(deudasIniciales);
 
   return (
@@ -74,18 +73,8 @@ export default function AnalisisPage() {
           <h1 className="text-2xl font-bold text-white">Análisis Financiero</h1>
           <p className="text-white/50 text-sm">Métricas detalladas de tu situación financiera</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="nav-pill">
-            {['2026', 'Q1', 'Q2', 'Q3', 'Q4'].map((periodo) => (
-              <button
-                key={periodo}
-                onClick={() => setPeriodoSeleccionado(periodo)}
-                className={`nav-pill-item ${periodoSeleccionado === periodo ? 'active' : ''}`}
-              >
-                {periodo}
-              </button>
-            ))}
-          </div>
+        <div className="text-sm text-white/40">
+          Plan 2026
         </div>
       </div>
 

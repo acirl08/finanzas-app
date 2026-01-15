@@ -1,11 +1,20 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, X, MessageCircle, Minimize2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, X, MessageCircle, Minimize2, CheckCircle } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface Gasto {
+  id: string;
+  fecha: string;
+  descripcion: string;
+  monto: number;
+  categoria: string;
+  titular: string;
 }
 
 const SYSTEM_CONTEXT = `Eres un asistente financiero personal para Alejandra y Ricardo, una pareja en México que está trabajando para salir de deudas.
@@ -16,6 +25,7 @@ CONTEXTO FINANCIERO:
 - Deuda total inicial: $491,442 MXN
 - Disponible mensual para pagar deuda extra: $38,450 MXN
 - Meta: Libres de deudas de tarjetas para noviembre 2026
+- Presupuesto mensual para gastos variables: $15,000 MXN
 
 DEUDAS (ordenadas por prioridad - método avalancha):
 1. Rappi - $14,403 - CAT 157.3%
@@ -29,20 +39,25 @@ DEUDAS (ordenadas por prioridad - método avalancha):
 9. BBVA (Ricardo) - $121,586 - CAT 32.5%
 10. Banorte/Invex - $49,060 - CAT 30%
 
-GASTOS FIJOS:
+GASTOS FIJOS MENSUALES:
 - Renta: $12,700
-- Carro: $13,000 (4 años restantes)
-- Crédito personal: $6,000 fijos
+- Carro: $13,000
+- Crédito personal: $6,000
 - Gasolina: $1,500
-- Luz: $1,250/mes
-- Gas: $450/mes
+- Luz: $1,250
+- Gas: $450
 - Suscripciones: $3,551
 
-REGLAS:
-1. Responde en español, de forma breve y directa
-2. Si preguntan sobre un gasto, evalúa si es necesario
-3. Motívalos pero sé realista
-4. Recuerda que NO deben usar tarjetas de crédito`;
+REGLAS IMPORTANTES:
+1. Responde en español, de forma breve y directa (máximo 3 párrafos)
+2. Si el usuario quiere registrar un gasto, extrae: monto, descripción, categoría (comida/transporte/entretenimiento/salud/hogar/servicios/otros), y quién gastó (alejandra/ricardo/compartido)
+3. Para registrar un gasto, DEBES responder con el formato EXACTO:
+   [REGISTRAR_GASTO]{"monto":500,"descripcion":"Cine","categoria":"entretenimiento","titular":"compartido"}[/REGISTRAR_GASTO]
+   Seguido de tu confirmación amigable.
+4. Si no está claro algún dato del gasto, pregunta antes de registrar
+5. Si preguntan si pueden gastar algo, evalúa si está dentro del presupuesto de $15,000 para gastos variables
+6. Motívalos pero sé realista
+7. Recuérdales que NO deben usar tarjetas de crédito`;
 
 export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,12 +65,13 @@ export default function FloatingChat() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: '¡Hola! Soy tu asistente financiero. ¿En qué te puedo ayudar?',
+      content: '¡Hola! Soy tu asistente financiero. Puedo ayudarte a:\n• Registrar gastos (ej: "Gasté $200 en comida")\n• Evaluar si puedes comprar algo\n• Responder dudas sobre el plan\n\n¿En qué te ayudo?',
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  const [lastGastoRegistrado, setLastGastoRegistrado] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -68,6 +84,43 @@ export default function FloatingChat() {
       setHasUnread(false);
     }
   }, [messages, isOpen]);
+
+  // Función para registrar gasto
+  const registrarGasto = (gastoData: Omit<Gasto, 'id' | 'fecha'>) => {
+    const gasto: Gasto = {
+      ...gastoData,
+      id: Date.now().toString(),
+      fecha: new Date().toISOString().split('T')[0],
+    };
+
+    const existingGastos = JSON.parse(localStorage.getItem('finanzas-gastos') || '[]');
+    existingGastos.push(gasto);
+    localStorage.setItem('finanzas-gastos', JSON.stringify(existingGastos));
+
+    setLastGastoRegistrado(gasto.descripcion);
+    setTimeout(() => setLastGastoRegistrado(null), 3000);
+
+    return gasto;
+  };
+
+  // Procesar respuesta del asistente para detectar gastos
+  const processAssistantResponse = (response: string): string => {
+    const gastoRegex = /\[REGISTRAR_GASTO\](.*?)\[\/REGISTRAR_GASTO\]/;
+    const match = response.match(gastoRegex);
+
+    if (match) {
+      try {
+        const gastoData = JSON.parse(match[1]);
+        registrarGasto(gastoData);
+        // Quitar el tag de la respuesta mostrada
+        return response.replace(gastoRegex, '').trim();
+      } catch (e) {
+        console.error('Error parsing gasto:', e);
+      }
+    }
+
+    return response;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +144,8 @@ export default function FloatingChat() {
       if (!response.ok) throw new Error('Error en la respuesta');
 
       const data = await response.json();
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.message }]);
+      const processedMessage = processAssistantResponse(data.message);
+      setMessages((prev) => [...prev, { role: 'assistant', content: processedMessage }]);
       if (!isOpen) setHasUnread(true);
     } catch (error) {
       console.error('Error:', error);
@@ -108,13 +162,21 @@ export default function FloatingChat() {
   };
 
   const quickActions = [
-    '¿Puedo gastar $500?',
+    'Gasté $500 en comida',
+    '¿Puedo gastar $300?',
     '¿Cómo vamos?',
-    'Motivación',
   ];
 
   return (
     <>
+      {/* Notificación de gasto registrado */}
+      {lastGastoRegistrado && (
+        <div className="fixed bottom-24 right-4 lg:right-8 z-50 bg-green-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-pulse">
+          <CheckCircle className="w-5 h-5" />
+          <span className="text-sm font-medium">Gasto registrado: {lastGastoRegistrado}</span>
+        </div>
+      )}
+
       {/* Chat Window */}
       {isOpen && (
         <div
@@ -220,7 +282,7 @@ export default function FloatingChat() {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Escribe tu pregunta..."
+                    placeholder="Escribe o registra un gasto..."
                     className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
                     disabled={isLoading}
                   />

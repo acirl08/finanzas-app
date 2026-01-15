@@ -39,16 +39,16 @@ export default function GastoForm({ onClose, onSubmit }: GastoFormProps) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simular guardado
-    await new Promise(resolve => setTimeout(resolve, 500));
-
     const gasto = {
       ...formData,
       monto: parseFloat(formData.monto),
       id: Date.now().toString(),
     };
 
-    console.log('Gasto registrado:', gasto);
+    // Guardar en localStorage
+    const existingGastos = JSON.parse(localStorage.getItem('finanzas-gastos') || '[]');
+    existingGastos.push(gasto);
+    localStorage.setItem('finanzas-gastos', JSON.stringify(existingGastos));
 
     if (onSubmit) {
       onSubmit(gasto);
