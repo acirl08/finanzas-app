@@ -15,7 +15,10 @@ import {
   ChevronRight,
   Zap,
   Target,
-  Calendar
+  Calendar,
+  DollarSign,
+  MoreHorizontal,
+  Info
 } from 'lucide-react';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import PresupuestosPersonales from './PresupuestosPersonales';
@@ -29,7 +32,7 @@ function formatMoney(amount: number) {
   }).format(amount);
 }
 
-// Data for charts
+// Data for charts - Updated colors to match new palette
 const monthlyData = [
   { name: 'Ene', pagado: 38450, deuda: 360243 },
   { name: 'Feb', pagado: 76900, deuda: 304750 },
@@ -40,11 +43,11 @@ const monthlyData = [
 ];
 
 const expenseData = [
-  { name: 'Deudas', value: 32099, color: '#ef4444' },
-  { name: 'Renta', value: 12700, color: '#8b5cf6' },
-  { name: 'Carro', value: 13000, color: '#3b82f6' },
-  { name: 'Servicios', value: 3200, color: '#f59e0b' },
-  { name: 'Subs', value: 3551, color: '#10b981' },
+  { name: 'Deudas', value: 32099, color: '#F87171' },
+  { name: 'Renta', value: 12700, color: '#8B5CF6' },
+  { name: 'Carro', value: 13000, color: '#60A5FA' },
+  { name: 'Servicios', value: 3200, color: '#FBBF24' },
+  { name: 'Subs', value: 3551, color: '#6EE7B7' },
 ];
 
 export default function Dashboard() {
@@ -60,16 +63,23 @@ export default function Dashboard() {
       {/* Top Stats Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Total Balance Card */}
-        <div className="balance-card lg:col-span-1">
-          <p className="text-white/80 text-sm mb-2">Deuda Total</p>
-          <h2 className="text-4xl font-bold text-white mb-1">
+        <div className="balance-card lg:col-span-1 hover-lift">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-white/60" />
+            <p className="text-white/80 text-sm font-medium">Deuda Total</p>
+            <span className="text-white/50 text-sm">/ $</span>
+          </div>
+          <p className="text-xs text-white/60 mb-3">Suma de todas las deudas activas</p>
+          <h2 className="text-4xl font-bold text-white mb-1 tracking-tight">
             {formatMoney(totales.deudaTotal).replace('$', '')}
-            <span className="text-2xl">$</span>
+            <span className="text-2xl ml-1">$</span>
           </h2>
-          <p className="text-white/70 text-sm flex items-center gap-1">
-            <TrendingDown className="w-4 h-4" />
-            {formatMoney(totales.deudaPagada)} pagados
-          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-1 text-white/80 text-sm">
+              <TrendingDown className="w-4 h-4" />
+              <span>{formatMoney(totales.deudaPagada)} pagados</span>
+            </div>
+          </div>
 
           <div className="flex gap-3 mt-6">
             <button className="btn-secondary bg-white/20 border-white/30 text-white text-sm px-4 py-2">
@@ -84,41 +94,59 @@ export default function Dashboard() {
 
         {/* Income & Expense Cards */}
         <div className="space-y-4">
-          <div className="glass-card">
-            <p className="text-white/60 text-sm">Ingreso Mensual</p>
-            <p className="text-2xl font-bold text-green-400 mt-1">
+          <div className="glass-card hover-lift">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#6EE7B7]" />
+                <span className="text-sm text-[#9CA3AF]">Ingreso Mensual</span>
+                <span className="text-[#6B7280] text-sm">/ $</span>
+              </div>
+              <MoreHorizontal className="w-4 h-4 text-[#6B7280]" />
+            </div>
+            <p className="text-xs text-[#6B7280] mb-2">Combinado Ale + Ricardo</p>
+            <p className="text-2xl font-bold text-[#6EE7B7] tracking-tight">
               +{formatMoney(INGRESO_MENSUAL)}
             </p>
-            <p className="text-xs text-white/40 mt-1">Combinado Ale + Ricardo</p>
           </div>
 
-          <div className="glass-card">
-            <p className="text-white/60 text-sm">Gastos Fijos</p>
-            <p className="text-2xl font-bold text-red-400 mt-1">
+          <div className="glass-card hover-lift">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#F87171]" />
+                <span className="text-sm text-[#9CA3AF]">Gastos Fijos</span>
+                <span className="text-[#6B7280] text-sm">/ $</span>
+              </div>
+              <MoreHorizontal className="w-4 h-4 text-[#6B7280]" />
+            </div>
+            <p className="text-xs text-[#6B7280] mb-2">Renta, carro, servicios, subs</p>
+            <p className="text-2xl font-bold text-[#F87171] tracking-tight">
               -{formatMoney(gastosFijosTotal)}
             </p>
-            <p className="text-xs text-white/40 mt-1">Renta, carro, servicios, subs</p>
           </div>
         </div>
 
         {/* Available for Debt */}
-        <div className="glass-card-dark">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-white/60 text-sm">Disponible para Deudas</p>
+        <div className="glass-card hover-lift">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
+              <span className="text-sm text-[#9CA3AF]">Disponible para Deudas</span>
+              <span className="text-[#6B7280] text-sm">/ $</span>
+            </div>
             <span className="badge badge-success">+Meta</span>
           </div>
-          <p className="text-3xl font-bold text-white mb-2">
+          <p className="text-xs text-[#6B7280] mb-3">Cada mes para atacar deudas</p>
+          <p className="text-3xl font-bold text-white mb-4 tracking-tight">
             {formatMoney(disponible)}
           </p>
-          <p className="text-sm text-white/50 mb-4">Cada mes para atacar deudas</p>
 
           <div className="progress-bar-bg">
             <div
-              className="progress-bar-fill progress-green"
+              className="progress-bar-fill progress-purple"
               style={{ width: `${totales.porcentajePagado}%` }}
             />
           </div>
-          <p className="text-xs text-white/40 mt-2">{totales.porcentajePagado.toFixed(1)}% de la meta</p>
+          <p className="text-xs text-[#6B7280] mt-2">{totales.porcentajePagado.toFixed(1)}% de la meta</p>
         </div>
       </div>
 
@@ -126,29 +154,34 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Flow Chart */}
         <div className="glass-card">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-semibold text-white">Progreso de Pago</h3>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#6EE7B7]" />
+              <span className="font-semibold text-white">Progreso de Pago</span>
+              <span className="text-[#6B7280] text-sm">/ $</span>
+            </div>
             <div className="nav-pill">
               <span className="nav-pill-item active">Mensual</span>
               <span className="nav-pill-item">Anual</span>
             </div>
           </div>
+          <p className="text-xs text-[#6B7280] mb-4">Proyección de pagos acumulados en 2026</p>
 
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient id="colorPagado" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#6EE7B7" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#6EE7B7" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
                 <YAxis hide />
                 <Tooltip
                   contentStyle={{
-                    background: 'rgba(30,30,50,0.9)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: '#161B22',
+                    border: '1px solid #30363D',
                     borderRadius: '12px',
                     color: 'white'
                   }}
@@ -157,7 +190,7 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="pagado"
-                  stroke="#10b981"
+                  stroke="#6EE7B7"
                   strokeWidth={3}
                   fillOpacity={1}
                   fill="url(#colorPagado)"
@@ -166,11 +199,11 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
 
-          <div className="flex justify-between mt-4 pt-4 border-t border-white/10">
+          <div className="flex justify-between mt-4 pt-4 border-t border-[#30363D]">
             {monthlyData.slice(0, 6).map((item, i) => (
               <div key={i} className="text-center">
-                <p className="text-xs text-white/40">{item.name}</p>
-                <p className="text-sm font-semibold text-green-400">+${(item.pagado/1000).toFixed(1)}k</p>
+                <p className="text-xs text-[#6B7280]">{item.name}</p>
+                <p className="text-sm font-semibold text-[#6EE7B7]">+${(item.pagado/1000).toFixed(1)}k</p>
               </div>
             ))}
           </div>
@@ -178,10 +211,15 @@ export default function Dashboard() {
 
         {/* Expense Split */}
         <div className="glass-card">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-semibold text-white">Distribución de Gastos</h3>
-            <span className="text-white/40 text-sm">Ene</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
+              <span className="font-semibold text-white">Distribución de Gastos</span>
+              <span className="text-[#6B7280] text-sm">/ %</span>
+            </div>
+            <span className="text-[#6B7280] text-sm">Ene</span>
           </div>
+          <p className="text-xs text-[#6B7280] mb-4">Desglose mensual de gastos fijos</p>
 
           <div className="flex items-center gap-8">
             <div className="relative w-40 h-40">
@@ -203,7 +241,7 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="donut-center">
-                <p className="text-xs text-white/50">Total</p>
+                <p className="text-xs text-[#6B7280]">Total</p>
                 <p className="text-lg font-bold text-white">$64.5k</p>
               </div>
             </div>
@@ -213,7 +251,7 @@ export default function Dashboard() {
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ background: item.color }} />
-                    <span className="text-sm text-white/70">{item.name}</span>
+                    <span className="text-sm text-[#9CA3AF]">{item.name}</span>
                   </div>
                   <span className="text-sm font-medium text-white">
                     {Math.round((item.value / 64550) * 100)}%
@@ -229,15 +267,17 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Deudas Priority List */}
         <div className="lg:col-span-2 glass-card">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white">Deudas por Prioridad</h3>
-              <span className="text-white/40 text-sm">{deudasActivas.length}</span>
+              <div className="w-2 h-2 rounded-full bg-[#F87171]" />
+              <span className="font-semibold text-white">Deudas por Prioridad</span>
+              <span className="text-[#6B7280] text-sm">/ {deudasActivas.length}</span>
             </div>
-            <button className="text-purple-400 text-sm hover:text-purple-300 flex items-center gap-1">
+            <button className="flex items-center gap-1 text-[#8B5CF6] text-sm hover:text-[#A78BFA] transition-colors">
               Ver todas <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+          <p className="text-xs text-[#6B7280] mb-4">Ordenadas por CAT (método avalancha)</p>
 
           <div className="space-y-3">
             {deudasActivas.slice(0, 5).map((deuda, index) => {
@@ -249,14 +289,14 @@ export default function Dashboard() {
                   key={deuda.id}
                   className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
                     isFirst
-                      ? 'bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30'
-                      : 'bg-white/5 hover:bg-white/10'
+                      ? 'bg-gradient-to-r from-[#F87171]/20 to-[#FBBF24]/20 border border-[#F87171]/30'
+                      : 'bg-[#1C2128] hover:bg-[#252931] border border-transparent hover:border-[#30363D]'
                   }`}
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-                    deuda.cat > 100 ? 'bg-red-500' :
-                    deuda.cat > 60 ? 'bg-orange-500' :
-                    deuda.cat > 40 ? 'bg-yellow-500' : 'bg-green-500'
+                    deuda.cat > 100 ? 'bg-[#F87171]' :
+                    deuda.cat > 60 ? 'bg-[#FBBF24]' :
+                    deuda.cat > 40 ? 'bg-[#FBBF24]' : 'bg-[#6EE7B7]'
                   }`}>
                     #{deuda.prioridad}
                   </div>
@@ -264,15 +304,15 @@ export default function Dashboard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-white">{deuda.nombre}</span>
-                      <span className="text-xs text-white/40 capitalize">({deuda.titular})</span>
+                      <span className="text-xs text-[#6B7280] capitalize">({deuda.titular})</span>
                       {isFirst && <span className="badge badge-danger text-xs">Prioridad</span>}
                     </div>
                     <div className="flex items-center gap-4 mt-1">
-                      <span className="text-xs text-white/50">CAT {deuda.cat}%</span>
-                      <div className="flex-1 h-1.5 bg-white/10 rounded-full max-w-[100px]">
+                      <span className="text-xs text-[#9CA3AF]">CAT {deuda.cat}%</span>
+                      <div className="flex-1 h-1.5 bg-[#252931] rounded-full max-w-[100px]">
                         <div
                           className={`h-full rounded-full ${
-                            deuda.cat > 100 ? 'bg-red-500' : 'bg-green-500'
+                            deuda.cat > 100 ? 'bg-[#F87171]' : 'bg-[#6EE7B7]'
                           }`}
                           style={{ width: `${Math.max(porcentaje, 0)}%` }}
                         />
@@ -282,7 +322,7 @@ export default function Dashboard() {
 
                   <div className="text-right">
                     <p className="font-semibold text-white">{formatMoney(deuda.saldoActual)}</p>
-                    <p className="text-xs text-white/40">Min: {formatMoney(deuda.pagoMinimo)}</p>
+                    <p className="text-xs text-[#6B7280]">Min: {formatMoney(deuda.pagoMinimo)}</p>
                   </div>
                 </div>
               );
@@ -291,19 +331,21 @@ export default function Dashboard() {
         </div>
 
         {/* Subscriptions */}
-        <div className="glass-card-dark">
-          <div className="flex items-center justify-between mb-4">
+        <div className="glass-card">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white">Suscripciones</h3>
-              <span className="text-white/40 text-sm">{suscripciones.length}</span>
+              <div className="w-2 h-2 rounded-full bg-[#F472B6]" />
+              <span className="font-semibold text-white">Suscripciones</span>
+              <span className="text-[#6B7280] text-sm">/ {suscripciones.length}</span>
             </div>
-            <button className="text-white/40 text-sm hover:text-white">Manage</button>
+            <button className="text-[#6B7280] text-sm hover:text-white transition-colors">Manage</button>
           </div>
+          <p className="text-xs text-[#6B7280] mb-4">Gastos recurrentes mensuales</p>
 
           {/* Subscription icons row */}
           <div className="flex gap-2 mb-6 flex-wrap">
             {['🎵', '🎬', '🎮', '📺', '☁️', '🛒'].map((icon, i) => (
-              <div key={i} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-lg">
+              <div key={i} className="w-10 h-10 rounded-xl bg-[#1C2128] border border-[#30363D] flex items-center justify-center text-lg hover:border-[#484F58] transition-colors">
                 {icon}
               </div>
             ))}
@@ -311,14 +353,14 @@ export default function Dashboard() {
 
           <div className="space-y-3">
             {suscripciones.slice(0, 4).map((sub) => (
-              <div key={sub.id} className="flex items-center justify-between py-2">
+              <div key={sub.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[#1C2128] transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                    <Wallet className="w-4 h-4 text-purple-400" />
+                  <div className="w-8 h-8 rounded-lg bg-[#8B5CF6]/20 flex items-center justify-center">
+                    <Wallet className="w-4 h-4 text-[#8B5CF6]" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">{sub.nombre}</p>
-                    <p className="text-xs text-white/40">Próximo: 15 Feb</p>
+                    <p className="text-xs text-[#6B7280]">Próximo: 15 Feb</p>
                   </div>
                 </div>
                 <p className="font-semibold text-white">{formatMoney(sub.monto)}</p>
@@ -326,9 +368,9 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="mt-4 pt-4 border-t border-[#30363D]">
             <div className="flex justify-between items-center">
-              <span className="text-white/50">Total mensual</span>
+              <span className="text-[#9CA3AF]">Total mensual</span>
               <span className="text-xl font-bold text-white">
                 {formatMoney(suscripciones.reduce((sum, s) => sum + s.monto, 0))}
               </span>
@@ -342,10 +384,12 @@ export default function Dashboard() {
 
       {/* Timeline */}
       <div className="glass-card">
-        <div className="flex items-center gap-2 mb-6">
-          <Calendar className="w-5 h-5 text-purple-400" />
-          <h3 className="font-semibold text-white">Timeline 2026</h3>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
+          <Calendar className="w-5 h-5 text-[#8B5CF6]" />
+          <span className="font-semibold text-white">Timeline 2026</span>
         </div>
+        <p className="text-xs text-[#6B7280] mb-6">Tu camino hacia la libertad financiera</p>
 
         <div className="flex gap-4 overflow-x-auto pb-4">
           {[
@@ -359,27 +403,27 @@ export default function Dashboard() {
           ].map((item, i) => (
             <div
               key={i}
-              className={`flex-shrink-0 w-32 p-4 rounded-xl text-center ${
+              className={`flex-shrink-0 w-32 p-4 rounded-xl text-center transition-all hover-lift ${
                 item.status === 'current'
-                  ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30 border border-purple-500/50'
+                  ? 'bg-gradient-to-br from-[#8B5CF6]/30 to-[#F472B6]/30 border border-[#8B5CF6]/50'
                   : item.status === 'goal'
-                  ? 'bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-500/50'
-                  : 'bg-white/5'
+                  ? 'bg-gradient-to-br from-[#6EE7B7]/30 to-[#34d399]/30 border border-[#6EE7B7]/50'
+                  : 'bg-[#1C2128] border border-[#30363D] hover:border-[#484F58]'
               }`}
             >
               <p className={`text-lg font-bold ${
-                item.status === 'current' ? 'text-purple-400' :
-                item.status === 'goal' ? 'text-green-400' : 'text-white'
+                item.status === 'current' ? 'text-[#8B5CF6]' :
+                item.status === 'goal' ? 'text-[#6EE7B7]' : 'text-white'
               }`}>{item.mes}</p>
-              <p className="text-xs text-white/50 mt-1">{item.deudas}</p>
+              <p className="text-xs text-[#9CA3AF] mt-1">{item.deudas}</p>
               {item.status === 'current' && (
                 <div className="mt-2">
-                  <span className="text-xs bg-purple-500 px-2 py-1 rounded-full">Ahora</span>
+                  <span className="text-xs bg-[#8B5CF6] px-2 py-1 rounded-full">Ahora</span>
                 </div>
               )}
               {item.status === 'goal' && (
                 <div className="mt-2">
-                  <span className="text-xs bg-green-500 px-2 py-1 rounded-full">Meta</span>
+                  <span className="text-xs bg-[#6EE7B7] text-[#0D1117] px-2 py-1 rounded-full font-semibold">Meta</span>
                 </div>
               )}
             </div>
