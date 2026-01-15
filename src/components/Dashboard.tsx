@@ -20,7 +20,7 @@ import {
   MoreHorizontal,
   Info
 } from 'lucide-react';
-import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, ReferenceLine } from 'recharts';
 import PresupuestosPersonales from './PresupuestosPersonales';
 
 function formatMoney(amount: number) {
@@ -32,15 +32,59 @@ function formatMoney(amount: number) {
   }).format(amount);
 }
 
+// Sparkline component for mini trend charts
+function Sparkline({ data, color, height = 30 }: { data: number[], color: string, height?: number }) {
+  const chartData = data.map((value, index) => ({ value, index }));
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={chartData}>
+        <Line
+          type="monotone"
+          dataKey="value"
+          stroke={color}
+          strokeWidth={2}
+          dot={false}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+// Change indicator component
+function ChangeIndicator({ value, isPositive, suffix = '' }: { value: string, isPositive: boolean, suffix?: string }) {
+  return (
+    <div className={`flex items-center gap-1 text-sm font-medium ${isPositive ? 'text-[#6EE7B7]' : 'text-[#F87171]'}`}>
+      {isPositive ? (
+        <ArrowUpRight className="w-4 h-4" />
+      ) : (
+        <ArrowDownRight className="w-4 h-4" />
+      )}
+      <span>{value}{suffix}</span>
+    </div>
+  );
+}
+
 // Data for charts - Updated colors to match new palette
 const monthlyData = [
-  { name: 'Ene', pagado: 38450, deuda: 360243 },
-  { name: 'Feb', pagado: 76900, deuda: 304750 },
-  { name: 'Mar', pagado: 115350, deuda: 266300 },
-  { name: 'Abr', pagado: 153800, deuda: 231467 },
-  { name: 'May', pagado: 192250, deuda: 193017 },
-  { name: 'Jun', pagado: 230700, deuda: 147060 },
+  { name: 'Ene', pagado: 38450, deuda: 452892, proyectado: 38450 },
+  { name: 'Feb', pagado: 76900, deuda: 414442, proyectado: 76900 },
+  { name: 'Mar', pagado: 115350, deuda: 375992, proyectado: 115350 },
+  { name: 'Abr', pagado: 153800, deuda: 337542, proyectado: 153800 },
+  { name: 'May', pagado: 192250, deuda: 299092, proyectado: 192250 },
+  { name: 'Jun', pagado: 230700, deuda: 260642, proyectado: 230700 },
+  { name: 'Jul', pagado: null, deuda: null, proyectado: 269150 },
+  { name: 'Ago', pagado: null, deuda: null, proyectado: 307600 },
+  { name: 'Sep', pagado: null, deuda: null, proyectado: 346050 },
+  { name: 'Oct', pagado: null, deuda: null, proyectado: 384500 },
+  { name: 'Nov', pagado: null, deuda: null, proyectado: 422950 },
+  { name: 'Dic', pagado: null, deuda: null, proyectado: 461400 },
 ];
+
+// Sparkline data for different metrics
+const deudaSparkline = [491442, 475000, 460000, 445000, 430000, 420000];
+const ingresoSparkline = [109000, 109000, 109000, 109000, 109000, 109000];
+const gastosSparkline = [62000, 63500, 64000, 64200, 64550, 64550];
+const disponibleSparkline = [35000, 36500, 37000, 38000, 38450, 38450];
 
 const expenseData = [
   { name: 'Deudas', value: 32099, color: '#F87171' },
@@ -101,12 +145,20 @@ export default function Dashboard() {
                 <span className="text-sm text-[#9CA3AF]">Ingreso Mensual</span>
                 <span className="text-[#6B7280] text-sm">/ $</span>
               </div>
-              <MoreHorizontal className="w-4 h-4 text-[#6B7280]" />
+              <MoreHorizontal className="w-4 h-4 text-[#6B7280] cursor-pointer hover:text-white transition-colors" />
             </div>
             <p className="text-xs text-[#6B7280] mb-2">Combinado Ale + Ricardo</p>
-            <p className="text-2xl font-bold text-[#6EE7B7] tracking-tight">
-              +{formatMoney(INGRESO_MENSUAL)}
-            </p>
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-2xl font-bold text-[#6EE7B7] tracking-tight">
+                  +{formatMoney(INGRESO_MENSUAL)}
+                </p>
+                <ChangeIndicator value="Estable" isPositive={true} />
+              </div>
+              <div className="w-20 h-8">
+                <Sparkline data={ingresoSparkline} color="#6EE7B7" />
+              </div>
+            </div>
           </div>
 
           <div className="glass-card hover-lift">
@@ -116,12 +168,20 @@ export default function Dashboard() {
                 <span className="text-sm text-[#9CA3AF]">Gastos Fijos</span>
                 <span className="text-[#6B7280] text-sm">/ $</span>
               </div>
-              <MoreHorizontal className="w-4 h-4 text-[#6B7280]" />
+              <MoreHorizontal className="w-4 h-4 text-[#6B7280] cursor-pointer hover:text-white transition-colors" />
             </div>
             <p className="text-xs text-[#6B7280] mb-2">Renta, carro, servicios, subs</p>
-            <p className="text-2xl font-bold text-[#F87171] tracking-tight">
-              -{formatMoney(gastosFijosTotal)}
-            </p>
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-2xl font-bold text-[#F87171] tracking-tight">
+                  -{formatMoney(gastosFijosTotal)}
+                </p>
+                <ChangeIndicator value="+$550" isPositive={false} suffix=" vs mes ant." />
+              </div>
+              <div className="w-20 h-8">
+                <Sparkline data={gastosSparkline} color="#F87171" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -136,9 +196,18 @@ export default function Dashboard() {
             <span className="badge badge-success">+Meta</span>
           </div>
           <p className="text-xs text-[#6B7280] mb-3">Cada mes para atacar deudas</p>
-          <p className="text-3xl font-bold text-white mb-4 tracking-tight">
-            {formatMoney(disponible)}
-          </p>
+
+          <div className="flex items-end justify-between mb-4">
+            <div>
+              <p className="text-3xl font-bold text-white tracking-tight">
+                {formatMoney(disponible)}
+              </p>
+              <ChangeIndicator value="+$450" isPositive={true} suffix=" vs mes ant." />
+            </div>
+            <div className="w-24 h-10">
+              <Sparkline data={disponibleSparkline} color="#8B5CF6" />
+            </div>
+          </div>
 
           <div className="progress-bar-bg">
             <div
@@ -146,13 +215,16 @@ export default function Dashboard() {
               style={{ width: `${totales.porcentajePagado}%` }}
             />
           </div>
-          <p className="text-xs text-[#6B7280] mt-2">{totales.porcentajePagado.toFixed(1)}% de la meta</p>
+          <div className="flex justify-between items-center mt-2">
+            <p className="text-xs text-[#6B7280]">{totales.porcentajePagado.toFixed(1)}% de la meta anual</p>
+            <p className="text-xs text-[#8B5CF6]">Meta: $461,400</p>
+          </div>
         </div>
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Flow Chart */}
+        {/* Revenue Flow Chart - Enhanced with projections */}
         <div className="glass-card">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -161,32 +233,68 @@ export default function Dashboard() {
               <span className="text-[#6B7280] text-sm">/ $</span>
             </div>
             <div className="nav-pill">
-              <span className="nav-pill-item active">Mensual</span>
-              <span className="nav-pill-item">Anual</span>
+              <span className="nav-pill-item active">2026</span>
+              <span className="nav-pill-item">Detalle</span>
             </div>
           </div>
-          <p className="text-xs text-[#6B7280] mb-4">Proyección de pagos acumulados en 2026</p>
+          <p className="text-xs text-[#6B7280] mb-2">Pagos acumulados vs proyección anual</p>
+
+          {/* Summary metrics above chart */}
+          <div className="flex gap-6 mb-4">
+            <div>
+              <p className="text-xs text-[#6B7280]">Pagado YTD</p>
+              <p className="text-lg font-bold text-[#6EE7B7]">{formatMoney(230700)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#6B7280]">Meta Dic 2026</p>
+              <p className="text-lg font-bold text-white">{formatMoney(461400)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#6B7280]">% Completado</p>
+              <p className="text-lg font-bold text-[#8B5CF6]">50%</p>
+            </div>
+          </div>
 
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient id="colorPagado" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6EE7B7" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#6EE7B7" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#6EE7B7" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#6EE7B7" stopOpacity={0.05}/>
+                  </linearGradient>
+                  <linearGradient id="colorProyectado" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 11 }} />
                 <YAxis hide />
                 <Tooltip
                   contentStyle={{
                     background: '#161B22',
                     border: '1px solid #30363D',
                     borderRadius: '12px',
-                    color: 'white'
+                    color: 'white',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
                   }}
-                  formatter={(value: number) => formatMoney(value)}
+                  labelStyle={{ color: '#9CA3AF', marginBottom: '4px' }}
+                  formatter={(value, name) => {
+                    if (value === null || value === undefined) return ['—', name === 'pagado' ? 'Pagado' : 'Proyectado'];
+                    return [formatMoney(Number(value)), name === 'pagado' ? 'Pagado' : 'Proyectado'];
+                  }}
                 />
+                {/* Projected area (full year) */}
+                <Area
+                  type="monotone"
+                  dataKey="proyectado"
+                  stroke="#8B5CF6"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  fillOpacity={1}
+                  fill="url(#colorProyectado)"
+                />
+                {/* Actual payments area */}
                 <Area
                   type="monotone"
                   dataKey="pagado"
@@ -194,22 +302,29 @@ export default function Dashboard() {
                   strokeWidth={3}
                   fillOpacity={1}
                   fill="url(#colorPagado)"
+                  connectNulls={false}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="flex justify-between mt-4 pt-4 border-t border-[#30363D]">
-            {monthlyData.slice(0, 6).map((item, i) => (
-              <div key={i} className="text-center">
-                <p className="text-xs text-[#6B7280]">{item.name}</p>
-                <p className="text-sm font-semibold text-[#6EE7B7]">+${(item.pagado/1000).toFixed(1)}k</p>
-              </div>
-            ))}
+          {/* Legend */}
+          <div className="flex gap-6 mt-4 pt-4 border-t border-[#30363D]">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-0.5 bg-[#6EE7B7]" />
+              <span className="text-xs text-[#9CA3AF]">Pagado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-0.5 bg-[#8B5CF6]" style={{ borderStyle: 'dashed', borderWidth: '1px', borderColor: '#8B5CF6', background: 'transparent' }} />
+              <span className="text-xs text-[#9CA3AF]">Proyectado</span>
+            </div>
+            <div className="ml-auto">
+              <span className="text-xs text-[#6B7280]">Actualizado: Ene 2026</span>
+            </div>
           </div>
         </div>
 
-        {/* Expense Split */}
+        {/* Expense Split - Enhanced with tooltip and amounts */}
         <div className="glass-card">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -217,45 +332,68 @@ export default function Dashboard() {
               <span className="font-semibold text-white">Distribución de Gastos</span>
               <span className="text-[#6B7280] text-sm">/ %</span>
             </div>
-            <span className="text-[#6B7280] text-sm">Ene</span>
+            <span className="text-[#6B7280] text-sm">Ene 2026</span>
           </div>
           <p className="text-xs text-[#6B7280] mb-4">Desglose mensual de gastos fijos</p>
 
-          <div className="flex items-center gap-8">
-            <div className="relative w-40 h-40">
+          <div className="flex items-center gap-6">
+            <div className="relative w-44 h-44">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={expenseData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
+                    innerRadius={50}
+                    outerRadius={75}
                     paddingAngle={3}
                     dataKey="value"
                   >
                     {expenseData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
+                        className="transition-all duration-200 hover:opacity-80"
+                        style={{ cursor: 'pointer' }}
+                      />
                     ))}
                   </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      background: '#161B22',
+                      border: '1px solid #30363D',
+                      borderRadius: '12px',
+                      color: 'white',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                    }}
+                    formatter={(value: number, name: string) => [formatMoney(value), name]}
+                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className="donut-center">
                 <p className="text-xs text-[#6B7280]">Total</p>
-                <p className="text-lg font-bold text-white">$64.5k</p>
+                <p className="text-xl font-bold text-white">$64.5k</p>
               </div>
             </div>
 
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 space-y-2">
               {expenseData.map((item, i) => (
-                <div key={i} className="flex items-center justify-between">
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-[#1C2128] transition-colors cursor-pointer group"
+                >
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ background: item.color }} />
-                    <span className="text-sm text-[#9CA3AF]">{item.name}</span>
+                    <div className="w-3 h-3 rounded-full transition-transform group-hover:scale-110" style={{ background: item.color }} />
+                    <span className="text-sm text-[#9CA3AF] group-hover:text-white transition-colors">{item.name}</span>
                   </div>
-                  <span className="text-sm font-medium text-white">
-                    {Math.round((item.value / 64550) * 100)}%
-                  </span>
+                  <div className="text-right">
+                    <span className="text-sm font-medium text-white">
+                      {formatMoney(item.value)}
+                    </span>
+                    <span className="text-xs text-[#6B7280] ml-2">
+                      {Math.round((item.value / 64550) * 100)}%
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
