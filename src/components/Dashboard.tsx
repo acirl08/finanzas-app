@@ -18,6 +18,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import PresupuestosPersonales from './PresupuestosPersonales';
 
 function formatMoney(amount: number) {
   return new Intl.NumberFormat('es-MX', {
@@ -335,6 +336,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Presupuestos Personales */}
+      <PresupuestosPersonales />
 
       {/* Timeline */}
       <div className="glass-card">

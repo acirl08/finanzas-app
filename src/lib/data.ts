@@ -137,6 +137,14 @@ export const suscripciones: Suscripcion[] = [
 
 export const INGRESO_MENSUAL = 109000;
 export const VALES_DESPENSA = 4800;
+export const PRESUPUESTO_VARIABLE = 15000;
+
+// Presupuestos personales para gustos (del presupuesto variable de $15,000)
+export const presupuestosPersonales = {
+  alejandra: 5000,  // Dinero libre para Ale
+  ricardo: 5000,    // Dinero libre para Ricardo
+  compartido: 5000, // Para salidas y gustos juntos
+};
 
 export const categorias = [
   'comida',
