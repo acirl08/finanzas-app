@@ -18,7 +18,10 @@ import {
   Calendar,
   DollarSign,
   MoreHorizontal,
-  Info
+  Info,
+  Pin,
+  Maximize2,
+  ExternalLink
 } from 'lucide-react';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, ReferenceLine } from 'recharts';
 import PresupuestosPersonales from './PresupuestosPersonales';
@@ -60,6 +63,60 @@ function ChangeIndicator({ value, isPositive, suffix = '' }: { value: string, is
         <ArrowDownRight className="w-4 h-4" />
       )}
       <span>{value}{suffix}</span>
+    </div>
+  );
+}
+
+// Action icons component for card headers
+function CardActions({ showPin = true, showExpand = true, showMore = true }: { showPin?: boolean, showExpand?: boolean, showMore?: boolean }) {
+  return (
+    <div className="flex items-center gap-1">
+      {showPin && (
+        <button className="p-1.5 rounded-lg text-[#6B7280] hover:text-white hover:bg-[#252931] transition-all" title="Fijar">
+          <Pin className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {showExpand && (
+        <button className="p-1.5 rounded-lg text-[#6B7280] hover:text-white hover:bg-[#252931] transition-all" title="Expandir">
+          <Maximize2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {showMore && (
+        <button className="p-1.5 rounded-lg text-[#6B7280] hover:text-white hover:bg-[#252931] transition-all" title="Más opciones">
+          <MoreHorizontal className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Educational tooltip component
+function EducationalTooltip({ title, content }: { title: string, content: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1 text-[#6B7280] hover:text-[#9CA3AF] transition-colors text-xs"
+      >
+        <Info className="w-3.5 h-3.5" />
+        <span>¿Qué es esto?</span>
+      </button>
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="absolute z-50 left-0 top-6 w-72 p-4 bg-[#1C2128] border border-[#30363D] rounded-xl shadow-xl">
+            <div className="flex items-start justify-between mb-2">
+              <h4 className="font-semibold text-white text-sm">{title}</h4>
+              <button onClick={() => setIsOpen(false)} className="text-[#6B7280] hover:text-white">
+                <span className="text-lg leading-none">&times;</span>
+              </button>
+            </div>
+            <p className="text-xs text-[#9CA3AF] leading-relaxed">{content}</p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -232,9 +289,12 @@ export default function Dashboard() {
               <span className="font-semibold text-white">Progreso de Pago</span>
               <span className="text-[#6B7280] text-sm">/ $</span>
             </div>
-            <div className="nav-pill">
-              <span className="nav-pill-item active">2026</span>
-              <span className="nav-pill-item">Detalle</span>
+            <div className="flex items-center gap-3">
+              <div className="nav-pill">
+                <span className="nav-pill-item active">2026</span>
+                <span className="nav-pill-item">Detalle</span>
+              </div>
+              <CardActions showPin={false} />
             </div>
           </div>
           <p className="text-xs text-[#6B7280] mb-2">Pagos acumulados vs proyección anual</p>
@@ -332,7 +392,10 @@ export default function Dashboard() {
               <span className="font-semibold text-white">Distribución de Gastos</span>
               <span className="text-[#6B7280] text-sm">/ %</span>
             </div>
-            <span className="text-[#6B7280] text-sm">Ene 2026</span>
+            <div className="flex items-center gap-3">
+              <span className="text-[#6B7280] text-sm">Ene 2026</span>
+              <CardActions showPin={false} showExpand={false} />
+            </div>
           </div>
           <p className="text-xs text-[#6B7280] mb-4">Desglose mensual de gastos fijos</p>
 
@@ -403,7 +466,7 @@ export default function Dashboard() {
 
       {/* Bottom Row - Debts & Subscriptions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Deudas Priority List */}
+        {/* Deudas Priority Table - Redesigned */}
         <div className="lg:col-span-2 glass-card">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -411,60 +474,101 @@ export default function Dashboard() {
               <span className="font-semibold text-white">Deudas por Prioridad</span>
               <span className="text-[#6B7280] text-sm">/ {deudasActivas.length}</span>
             </div>
-            <button className="flex items-center gap-1 text-[#8B5CF6] text-sm hover:text-[#A78BFA] transition-colors">
-              Ver todas <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-4">
+              <EducationalTooltip
+                title="Método Avalancha"
+                content="Pagar primero la deuda con mayor CAT (tasa de interés) mientras pagas el mínimo en las demás. Matemáticamente, esto minimiza el total de intereses pagados y te libera de deudas más rápido."
+              />
+              <button className="flex items-center gap-1 text-[#8B5CF6] text-sm hover:text-[#A78BFA] transition-colors">
+                Ver todas <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-[#6B7280] mb-4">Ordenadas por CAT (método avalancha)</p>
+          <p className="text-xs text-[#6B7280] mb-4">Ordenadas por CAT (método avalancha) - ataca primero la de mayor interés</p>
 
-          <div className="space-y-3">
-            {deudasActivas.slice(0, 5).map((deuda, index) => {
-              const porcentaje = ((deuda.saldoInicial - deuda.saldoActual) / deuda.saldoInicial) * 100;
+          {/* Table Header */}
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-[#0D1117] rounded-lg mb-2 text-xs font-medium text-[#6B7280] uppercase tracking-wider">
+            <div className="col-span-1">#</div>
+            <div className="col-span-4">Deuda</div>
+            <div className="col-span-2 text-center">CAT</div>
+            <div className="col-span-3 text-right">Saldo</div>
+            <div className="col-span-2 text-right">Mínimo</div>
+          </div>
+
+          {/* Table Rows */}
+          <div className="space-y-2">
+            {deudasActivas.slice(0, 6).map((deuda, index) => {
               const isFirst = index === 0;
+              const isHighCAT = deuda.cat > 100;
+              const isMediumCAT = deuda.cat > 50 && deuda.cat <= 100;
 
               return (
                 <div
                   key={deuda.id}
-                  className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
+                  className={`grid grid-cols-12 gap-2 px-4 py-3 rounded-xl transition-all cursor-pointer group ${
                     isFirst
-                      ? 'bg-gradient-to-r from-[#F87171]/20 to-[#FBBF24]/20 border border-[#F87171]/30'
+                      ? 'bg-gradient-to-r from-[#F87171]/20 to-[#FBBF24]/10 border border-[#F87171]/30 hover:border-[#F87171]/50'
                       : 'bg-[#1C2128] hover:bg-[#252931] border border-transparent hover:border-[#30363D]'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-                    deuda.cat > 100 ? 'bg-[#F87171]' :
-                    deuda.cat > 60 ? 'bg-[#FBBF24]' :
-                    deuda.cat > 40 ? 'bg-[#FBBF24]' : 'bg-[#6EE7B7]'
-                  }`}>
-                    #{deuda.prioridad}
+                  {/* Priority Number */}
+                  <div className="col-span-1 flex items-center">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm text-white ${
+                      isHighCAT ? 'bg-[#F87171]' :
+                      isMediumCAT ? 'bg-[#FBBF24]' : 'bg-[#6EE7B7]'
+                    }`}>
+                      {deuda.prioridad}
+                    </div>
                   </div>
 
-                  <div className="flex-1">
+                  {/* Debt Name & Owner */}
+                  <div className="col-span-4 flex flex-col justify-center">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-white">{deuda.nombre}</span>
-                      <span className="text-xs text-[#6B7280] capitalize">({deuda.titular})</span>
-                      {isFirst && <span className="badge badge-danger text-xs">Prioridad</span>}
+                      <span className="font-medium text-white group-hover:text-[#8B5CF6] transition-colors">
+                        {deuda.nombre}
+                      </span>
+                      {isFirst && (
+                        <span className="px-2 py-0.5 bg-[#F87171]/20 text-[#F87171] text-xs rounded-full font-medium">
+                          Atacar
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className="text-xs text-[#9CA3AF]">CAT {deuda.cat}%</span>
-                      <div className="flex-1 h-1.5 bg-[#252931] rounded-full max-w-[100px]">
-                        <div
-                          className={`h-full rounded-full ${
-                            deuda.cat > 100 ? 'bg-[#F87171]' : 'bg-[#6EE7B7]'
-                          }`}
-                          style={{ width: `${Math.max(porcentaje, 0)}%` }}
-                        />
-                      </div>
-                    </div>
+                    <span className="text-xs text-[#6B7280] capitalize">{deuda.titular}</span>
                   </div>
 
-                  <div className="text-right">
-                    <p className="font-semibold text-white">{formatMoney(deuda.saldoActual)}</p>
-                    <p className="text-xs text-[#6B7280]">Min: {formatMoney(deuda.pagoMinimo)}</p>
+                  {/* CAT */}
+                  <div className="col-span-2 flex items-center justify-center">
+                    <span className={`px-2 py-1 rounded-lg text-sm font-semibold ${
+                      isHighCAT ? 'bg-[#F87171]/20 text-[#F87171]' :
+                      isMediumCAT ? 'bg-[#FBBF24]/20 text-[#FBBF24]' :
+                      'bg-[#6EE7B7]/20 text-[#6EE7B7]'
+                    }`}>
+                      {deuda.cat}%
+                    </span>
+                  </div>
+
+                  {/* Balance */}
+                  <div className="col-span-3 flex items-center justify-end">
+                    <span className="font-semibold text-white">{formatMoney(deuda.saldoActual)}</span>
+                  </div>
+
+                  {/* Minimum Payment */}
+                  <div className="col-span-2 flex items-center justify-end">
+                    <span className="text-[#9CA3AF]">{formatMoney(deuda.pagoMinimo)}</span>
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          {/* Summary Footer */}
+          <div className="mt-4 pt-4 border-t border-[#30363D] flex justify-between items-center">
+            <div className="text-xs text-[#6B7280]">
+              Total pagos mínimos: <span className="text-white font-semibold">{formatMoney(totales.pagosMinimos)}</span>
+            </div>
+            <div className="text-xs text-[#6B7280]">
+              Interés ahorrado con avalancha: <span className="text-[#6EE7B7] font-semibold">~$156,320</span>
+            </div>
           </div>
         </div>
 
@@ -520,52 +624,148 @@ export default function Dashboard() {
       {/* Presupuestos Personales */}
       <PresupuestosPersonales />
 
-      {/* Timeline */}
+      {/* Timeline 2026 - Enhanced with area chart */}
       <div className="glass-card">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
-          <Calendar className="w-5 h-5 text-[#8B5CF6]" />
-          <span className="font-semibold text-white">Timeline 2026</span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
+            <Calendar className="w-5 h-5 text-[#8B5CF6]" />
+            <span className="font-semibold text-white">Timeline 2026</span>
+            <span className="text-[#6B7280] text-sm">/ Libertad Financiera</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-xs text-[#6B7280]">Meta</p>
+              <p className="text-sm font-bold text-[#6EE7B7]">Dic 2026</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-[#6B7280]">Meses restantes</p>
+              <p className="text-sm font-bold text-white">11</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-[#6B7280]">Interés ahorrado</p>
+              <p className="text-sm font-bold text-[#6EE7B7]">~$156k</p>
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-[#6B7280] mb-6">Tu camino hacia la libertad financiera</p>
+        <p className="text-xs text-[#6B7280] mb-4">Tu camino hacia la libertad financiera - deuda decreciente mes a mes</p>
 
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        {/* Debt decline area chart */}
+        <div className="h-32 mb-6">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={[
+              { mes: 'Ene', deuda: 491442, pagado: 0 },
+              { mes: 'Feb', deuda: 452992, pagado: 38450 },
+              { mes: 'Mar', deuda: 414542, pagado: 76900 },
+              { mes: 'Abr', deuda: 376092, pagado: 115350 },
+              { mes: 'May', deuda: 337642, pagado: 153800 },
+              { mes: 'Jun', deuda: 299192, pagado: 192250 },
+              { mes: 'Jul', deuda: 260742, pagado: 230700 },
+              { mes: 'Ago', deuda: 222292, pagado: 269150 },
+              { mes: 'Sep', deuda: 183842, pagado: 307600 },
+              { mes: 'Oct', deuda: 145392, pagado: 346050 },
+              { mes: 'Nov', deuda: 106942, pagado: 384500 },
+              { mes: 'Dic', deuda: 0, pagado: 491442 },
+            ]}>
+              <defs>
+                <linearGradient id="deudaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#F87171" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#F87171" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 10 }} />
+              <YAxis hide />
+              <Tooltip
+                contentStyle={{
+                  background: '#161B22',
+                  border: '1px solid #30363D',
+                  borderRadius: '12px',
+                  color: 'white'
+                }}
+                formatter={(value: number) => [formatMoney(value), 'Deuda restante']}
+              />
+              <Area
+                type="monotone"
+                dataKey="deuda"
+                stroke="#F87171"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#deudaGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Milestone cards */}
+        <div className="flex gap-3 overflow-x-auto pb-2">
           {[
-            { mes: 'Ene', deudas: 'Rappi, Nu, Amex Plat', status: 'current' },
-            { mes: 'Feb', deudas: 'HEB, Nu Ricardo', status: 'pending' },
-            { mes: 'Abr', deudas: 'Santander', status: 'pending' },
-            { mes: 'Jun', deudas: 'Amex Gold', status: 'pending' },
-            { mes: 'Ago', deudas: 'Banorte', status: 'pending' },
-            { mes: 'Nov', deudas: 'BBVA', status: 'pending' },
-            { mes: 'Dic', deudas: 'LIBRE!', status: 'goal' },
+            { mes: 'Ene', deudas: ['Rappi', 'Nu Ale', 'Amex Plat'], status: 'current', monto: 21518 },
+            { mes: 'Feb', deudas: ['HEB', 'Nu Ricardo'], status: 'pending', monto: 49751 },
+            { mes: 'Abr', deudas: ['Santander LikeU'], status: 'pending', monto: 66138 },
+            { mes: 'Jun', deudas: ['Amex Gold'], status: 'pending', monto: 91622 },
+            { mes: 'Ago', deudas: ['Banorte/Invex'], status: 'pending', monto: 49060 },
+            { mes: 'Oct', deudas: ['Crédito Personal'], status: 'pending', monto: 91767 },
+            { mes: 'Nov', deudas: ['BBVA'], status: 'pending', monto: 121586 },
+            { mes: 'Dic', deudas: ['LIBRE!'], status: 'goal', monto: 0 },
           ].map((item, i) => (
             <div
               key={i}
-              className={`flex-shrink-0 w-32 p-4 rounded-xl text-center transition-all hover-lift ${
+              className={`flex-shrink-0 w-36 p-3 rounded-xl transition-all hover-lift ${
                 item.status === 'current'
-                  ? 'bg-gradient-to-br from-[#8B5CF6]/30 to-[#F472B6]/30 border border-[#8B5CF6]/50'
+                  ? 'bg-gradient-to-br from-[#8B5CF6]/30 to-[#F472B6]/20 border-2 border-[#8B5CF6]'
                   : item.status === 'goal'
-                  ? 'bg-gradient-to-br from-[#6EE7B7]/30 to-[#34d399]/30 border border-[#6EE7B7]/50'
+                  ? 'bg-gradient-to-br from-[#6EE7B7]/30 to-[#34d399]/20 border-2 border-[#6EE7B7]'
                   : 'bg-[#1C2128] border border-[#30363D] hover:border-[#484F58]'
               }`}
             >
-              <p className={`text-lg font-bold ${
-                item.status === 'current' ? 'text-[#8B5CF6]' :
-                item.status === 'goal' ? 'text-[#6EE7B7]' : 'text-white'
-              }`}>{item.mes}</p>
-              <p className="text-xs text-[#9CA3AF] mt-1">{item.deudas}</p>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-lg font-bold ${
+                  item.status === 'current' ? 'text-[#8B5CF6]' :
+                  item.status === 'goal' ? 'text-[#6EE7B7]' : 'text-white'
+                }`}>{item.mes}</span>
+                {item.status === 'current' && (
+                  <span className="w-2 h-2 rounded-full bg-[#8B5CF6] animate-pulse" />
+                )}
+                {item.status === 'goal' && (
+                  <Target className="w-4 h-4 text-[#6EE7B7]" />
+                )}
+              </div>
+              <div className="space-y-1">
+                {item.deudas.map((deuda, j) => (
+                  <p key={j} className="text-xs text-[#9CA3AF] truncate">{deuda}</p>
+                ))}
+              </div>
+              {item.monto > 0 && (
+                <p className="text-xs text-[#F87171] mt-2 font-medium">
+                  -{formatMoney(item.monto)}
+                </p>
+              )}
               {item.status === 'current' && (
                 <div className="mt-2">
-                  <span className="text-xs bg-[#8B5CF6] px-2 py-1 rounded-full">Ahora</span>
+                  <span className="text-xs bg-[#8B5CF6] px-2 py-0.5 rounded-full text-white">Ahora</span>
                 </div>
               )}
               {item.status === 'goal' && (
                 <div className="mt-2">
-                  <span className="text-xs bg-[#6EE7B7] text-[#0D1117] px-2 py-1 rounded-full font-semibold">Meta</span>
+                  <span className="text-xs bg-[#6EE7B7] px-2 py-0.5 rounded-full text-[#0D1117] font-semibold">Meta</span>
                 </div>
               )}
             </div>
           ))}
+        </div>
+
+        {/* Progress bar */}
+        <div className="mt-4 pt-4 border-t border-[#30363D]">
+          <div className="flex justify-between text-xs text-[#6B7280] mb-2">
+            <span>Progreso hacia libertad financiera</span>
+            <span className="text-[#8B5CF6] font-medium">8.3% completado</span>
+          </div>
+          <div className="h-2 bg-[#1C2128] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#6EE7B7]"
+              style={{ width: '8.3%' }}
+            />
+          </div>
         </div>
       </div>
     </div>
