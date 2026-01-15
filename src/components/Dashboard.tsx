@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Deuda } from '@/types';
-import { deudasIniciales, calcularTotales, calcularDisponible, calcularGastosFijos, INGRESO_MENSUAL, suscripciones } from '@/lib/data';
+import { Deuda, Suscripcion } from '@/types';
+import { calcularGastosFijos, INGRESO_MENSUAL, suscripciones as defaultSuscripciones } from '@/lib/data';
+import { subscribeToDeudas, calcularTotalesFromDeudas, initializeFirestoreData } from '@/lib/firestore';
 import {
   TrendingUp,
   TrendingDown,
@@ -233,26 +234,29 @@ function EducationalTooltip({ title, content }: { title: string, content: string
 }
 
 // Data for charts - Updated colors to match new palette
+// Datos del gráfico de progreso - Enero 2026, apenas empezando
+// pagado = lo que realmente se ha pagado (acumulado)
+// proyectado = la proyección de pagos si se sigue el plan
 const monthlyData = [
-  { name: 'Ene', pagado: 38450, deuda: 452892, proyectado: 38450 },
-  { name: 'Feb', pagado: 76900, deuda: 414442, proyectado: 76900 },
-  { name: 'Mar', pagado: 115350, deuda: 375992, proyectado: 115350 },
-  { name: 'Abr', pagado: 153800, deuda: 337542, proyectado: 153800 },
-  { name: 'May', pagado: 192250, deuda: 299092, proyectado: 192250 },
-  { name: 'Jun', pagado: 230700, deuda: 260642, proyectado: 230700 },
+  { name: 'Ene', pagado: 0, deuda: 491442, proyectado: 38450 },
+  { name: 'Feb', pagado: null, deuda: null, proyectado: 76900 },
+  { name: 'Mar', pagado: null, deuda: null, proyectado: 115350 },
+  { name: 'Abr', pagado: null, deuda: null, proyectado: 153800 },
+  { name: 'May', pagado: null, deuda: null, proyectado: 192250 },
+  { name: 'Jun', pagado: null, deuda: null, proyectado: 230700 },
   { name: 'Jul', pagado: null, deuda: null, proyectado: 269150 },
   { name: 'Ago', pagado: null, deuda: null, proyectado: 307600 },
   { name: 'Sep', pagado: null, deuda: null, proyectado: 346050 },
   { name: 'Oct', pagado: null, deuda: null, proyectado: 384500 },
   { name: 'Nov', pagado: null, deuda: null, proyectado: 422950 },
-  { name: 'Dic', pagado: null, deuda: null, proyectado: 461400 },
+  { name: 'Dic', pagado: null, deuda: null, proyectado: 491442 },
 ];
 
-// Sparkline data for different metrics
-const deudaSparkline = [491442, 475000, 460000, 445000, 430000, 420000];
+// Sparkline data - Como es enero, mostramos solo la deuda inicial
+const deudaSparkline = [491442, 491442, 491442, 491442, 491442, 491442];
 const ingresoSparkline = [109000, 109000, 109000, 109000, 109000, 109000];
-const gastosSparkline = [62000, 63500, 64000, 64200, 64550, 64550];
-const disponibleSparkline = [35000, 36500, 37000, 38000, 38450, 38450];
+const gastosSparkline = [64550, 64550, 64550, 64550, 64550, 64550];
+const disponibleSparkline = [38450, 38450, 38450, 38450, 38450, 38450];
 
 const expenseData = [
   { name: 'Deudas', value: 32099, color: '#F87171' },
@@ -263,12 +267,49 @@ const expenseData = [
 ];
 
 export default function Dashboard() {
-  const [deudas] = useState<Deuda[]>(deudasIniciales);
-  const totales = calcularTotales(deudas);
-  const disponible = calcularDisponible(deudas);
+  const [deudas, setDeudas] = useState<Deuda[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [suscripciones] = useState<Suscripcion[]>(defaultSuscripciones);
+
+  // Initialize Firebase and subscribe to real-time updates
+  useEffect(() => {
+    // Initialize data if needed
+    initializeFirestoreData().catch(console.error);
+
+    // Subscribe to real-time updates
+    const unsubscribe = subscribeToDeudas((deudasActualizadas) => {
+      setDeudas(deudasActualizadas);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const totales = calcularTotalesFromDeudas(deudas);
   const gastosFijosTotal = calcularGastosFijos();
+  const disponible = INGRESO_MENSUAL - gastosFijosTotal - totales.pagosMinimos;
 
   const deudasActivas = deudas.filter(d => !d.liquidada).sort((a, b) => a.prioridad - b.prioridad);
+
+  // Show loading skeleton while fetching data
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <SkeletonCard />
+          <div className="space-y-4">
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          <SkeletonCard />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -344,7 +385,7 @@ export default function Dashboard() {
                 <p className="text-2xl font-bold text-[#F87171] tracking-tight">
                   -{formatMoney(gastosFijosTotal)}
                 </p>
-                <ChangeIndicator value="+$550" isPositive={false} suffix=" vs mes ant." />
+                <ChangeIndicator value="Primer mes" isPositive={true} suffix="" />
               </div>
               <div className="w-20 h-8">
                 <Sparkline data={gastosSparkline} color="#F87171" />
@@ -370,7 +411,7 @@ export default function Dashboard() {
               <p className="text-3xl font-bold text-white tracking-tight">
                 {formatMoney(disponible)}
               </p>
-              <ChangeIndicator value="+$450" isPositive={true} suffix=" vs mes ant." />
+              <ChangeIndicator value="Primer mes" isPositive={true} suffix="" />
             </div>
             <div className="w-24 h-10">
               <Sparkline data={disponibleSparkline} color="#8B5CF6" />
@@ -411,15 +452,15 @@ export default function Dashboard() {
           <div className="flex gap-6 mb-4">
             <div>
               <p className="text-xs text-[#6B7280]">Pagado YTD</p>
-              <p className="text-lg font-bold text-[#6EE7B7]">{formatMoney(230700)}</p>
+              <p className="text-lg font-bold text-[#6EE7B7]">{formatMoney(totales.deudaPagada)}</p>
             </div>
             <div>
               <p className="text-xs text-[#6B7280]">Meta Dic 2026</p>
-              <p className="text-lg font-bold text-white">{formatMoney(461400)}</p>
+              <p className="text-lg font-bold text-white">{formatMoney(totales.deudaInicial)}</p>
             </div>
             <div>
               <p className="text-xs text-[#6B7280]">% Completado</p>
-              <p className="text-lg font-bold text-[#8B5CF6]">50%</p>
+              <p className="text-lg font-bold text-[#8B5CF6]">{totales.porcentajePagado.toFixed(1)}%</p>
             </div>
           </div>
 
@@ -866,10 +907,10 @@ export default function Dashboard() {
         <div className="mt-4 pt-4 border-t border-[#30363D]">
           <div className="flex justify-between text-xs text-[#6B7280] mb-2">
             <span>Progreso hacia libertad financiera</span>
-            <span className="text-[#8B5CF6] font-medium">8.3% completado</span>
+            <span className="text-[#8B5CF6] font-medium">{totales.porcentajePagado.toFixed(1)}% completado</span>
           </div>
           <div className="h-2 bg-[#1C2128] rounded-full overflow-hidden">
-            <AnimatedProgress value={8.3} color="bg-gradient-to-r from-[#8B5CF6] to-[#6EE7B7]" delay={800} />
+            <AnimatedProgress value={totales.porcentajePagado} color="bg-gradient-to-r from-[#8B5CF6] to-[#6EE7B7]" delay={800} />
           </div>
         </div>
       </div>

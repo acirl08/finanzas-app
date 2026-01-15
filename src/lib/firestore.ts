@@ -1,0 +1,294 @@
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  setDoc,
+  updateDoc,
+  addDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  Timestamp,
+  writeBatch
+} from 'firebase/firestore';
+import { db } from './firebase';
+import { Deuda, GastoFijo, Suscripcion } from '@/types';
+import { deudasIniciales, gastosFijos, suscripciones, presupuestosPersonales, INGRESO_MENSUAL, VALES_DESPENSA, PRESUPUESTO_VARIABLE } from './data';
+
+// Types for Firestore
+export interface Gasto {
+  id?: string;
+  fecha: string;
+  descripcion: string;
+  monto: number;
+  categoria: string;
+  titular: 'alejandra' | 'ricardo' | 'compartido';
+  createdAt?: Timestamp;
+}
+
+export interface Pago {
+  id?: string;
+  deudaId: string;
+  monto: number;
+  fecha: string;
+  nota?: string;
+  createdAt?: Timestamp;
+}
+
+export interface ConfiguracionFinanciera {
+  ingresoMensual: number;
+  valesDespensa: number;
+  presupuestoVariable: number;
+  presupuestosPersonales: {
+    alejandra: number;
+    ricardo: number;
+    compartido: number;
+  };
+}
+
+// Collections
+const DEUDAS_COLLECTION = 'deudas';
+const GASTOS_COLLECTION = 'gastos';
+const PAGOS_COLLECTION = 'pagos';
+const CONFIG_COLLECTION = 'configuracion';
+const GASTOS_FIJOS_COLLECTION = 'gastosFijos';
+const SUSCRIPCIONES_COLLECTION = 'suscripciones';
+
+// ============ DEUDAS ============
+
+export async function getDeudas(): Promise<Deuda[]> {
+  const querySnapshot = await getDocs(
+    query(collection(db, DEUDAS_COLLECTION), orderBy('prioridad', 'asc'))
+  );
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Deuda[];
+}
+
+export function subscribeToDeudas(callback: (deudas: Deuda[]) => void) {
+  return onSnapshot(
+    query(collection(db, DEUDAS_COLLECTION), orderBy('prioridad', 'asc')),
+    (snapshot) => {
+      const deudas = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Deuda[];
+      callback(deudas);
+    }
+  );
+}
+
+export async function updateDeuda(id: string, data: Partial<Deuda>) {
+  const deudaRef = doc(db, DEUDAS_COLLECTION, id);
+  await updateDoc(deudaRef, data);
+}
+
+export async function registrarPagoDeuda(deudaId: string, monto: number, nota?: string) {
+  // Get current debt
+  const deudaRef = doc(db, DEUDAS_COLLECTION, deudaId);
+  const deudaSnap = await getDoc(deudaRef);
+
+  if (!deudaSnap.exists()) {
+    throw new Error('Deuda no encontrada');
+  }
+
+  const deuda = deudaSnap.data() as Deuda;
+  const nuevoSaldo = Math.max(0, deuda.saldoActual - monto);
+
+  // Update debt balance
+  await updateDoc(deudaRef, {
+    saldoActual: nuevoSaldo,
+    liquidada: nuevoSaldo === 0
+  });
+
+  // Record payment
+  await addDoc(collection(db, PAGOS_COLLECTION), {
+    deudaId,
+    monto,
+    fecha: new Date().toISOString().split('T')[0],
+    nota,
+    createdAt: Timestamp.now()
+  });
+
+  return nuevoSaldo;
+}
+
+// ============ GASTOS ============
+
+export async function getGastos(mes?: string): Promise<Gasto[]> {
+  let q = query(collection(db, GASTOS_COLLECTION), orderBy('fecha', 'desc'));
+
+  const querySnapshot = await getDocs(q);
+  let gastos = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Gasto[];
+
+  // Filter by month if provided
+  if (mes) {
+    gastos = gastos.filter(g => g.fecha.startsWith(mes));
+  }
+
+  return gastos;
+}
+
+export function subscribeToGastos(callback: (gastos: Gasto[]) => void) {
+  return onSnapshot(
+    query(collection(db, GASTOS_COLLECTION), orderBy('fecha', 'desc')),
+    (snapshot) => {
+      const gastos = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Gasto[];
+      callback(gastos);
+    }
+  );
+}
+
+export async function addGasto(gasto: Omit<Gasto, 'id' | 'createdAt'>) {
+  const docRef = await addDoc(collection(db, GASTOS_COLLECTION), {
+    ...gasto,
+    createdAt: Timestamp.now()
+  });
+  return docRef.id;
+}
+
+export async function deleteGasto(id: string) {
+  await deleteDoc(doc(db, GASTOS_COLLECTION, id));
+}
+
+// ============ PAGOS ============
+
+export async function getPagos(): Promise<Pago[]> {
+  const querySnapshot = await getDocs(
+    query(collection(db, PAGOS_COLLECTION), orderBy('fecha', 'desc'))
+  );
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Pago[];
+}
+
+export function subscribeToPagos(callback: (pagos: Pago[]) => void) {
+  return onSnapshot(
+    query(collection(db, PAGOS_COLLECTION), orderBy('fecha', 'desc')),
+    (snapshot) => {
+      const pagos = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Pago[];
+      callback(pagos);
+    }
+  );
+}
+
+// ============ CONFIGURACIÓN ============
+
+export async function getConfiguracion(): Promise<ConfiguracionFinanciera> {
+  const docRef = doc(db, CONFIG_COLLECTION, 'principal');
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    return docSnap.data() as ConfiguracionFinanciera;
+  }
+
+  // Return defaults if not configured
+  return {
+    ingresoMensual: INGRESO_MENSUAL,
+    valesDespensa: VALES_DESPENSA,
+    presupuestoVariable: PRESUPUESTO_VARIABLE,
+    presupuestosPersonales
+  };
+}
+
+export async function updateConfiguracion(config: Partial<ConfiguracionFinanciera>) {
+  const docRef = doc(db, CONFIG_COLLECTION, 'principal');
+  await setDoc(docRef, config, { merge: true });
+}
+
+// ============ GASTOS FIJOS ============
+
+export async function getGastosFijos(): Promise<GastoFijo[]> {
+  const querySnapshot = await getDocs(collection(db, GASTOS_FIJOS_COLLECTION));
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as GastoFijo[];
+}
+
+// ============ SUSCRIPCIONES ============
+
+export async function getSuscripciones(): Promise<Suscripcion[]> {
+  const querySnapshot = await getDocs(collection(db, SUSCRIPCIONES_COLLECTION));
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Suscripcion[];
+}
+
+// ============ INICIALIZACIÓN ============
+
+export async function initializeFirestoreData() {
+  // Check if data already exists
+  const deudasSnapshot = await getDocs(collection(db, DEUDAS_COLLECTION));
+
+  if (deudasSnapshot.empty) {
+    console.log('Inicializando datos en Firestore...');
+    const batch = writeBatch(db);
+
+    // Add deudas
+    deudasIniciales.forEach((deuda) => {
+      const docRef = doc(db, DEUDAS_COLLECTION, deuda.id);
+      batch.set(docRef, deuda);
+    });
+
+    // Add gastos fijos
+    gastosFijos.forEach((gasto) => {
+      const docRef = doc(db, GASTOS_FIJOS_COLLECTION, gasto.id);
+      batch.set(docRef, gasto);
+    });
+
+    // Add suscripciones
+    suscripciones.forEach((sub) => {
+      const docRef = doc(db, SUSCRIPCIONES_COLLECTION, sub.id);
+      batch.set(docRef, sub);
+    });
+
+    // Add configuración
+    const configRef = doc(db, CONFIG_COLLECTION, 'principal');
+    batch.set(configRef, {
+      ingresoMensual: INGRESO_MENSUAL,
+      valesDespensa: VALES_DESPENSA,
+      presupuestoVariable: PRESUPUESTO_VARIABLE,
+      presupuestosPersonales
+    });
+
+    await batch.commit();
+    console.log('Datos inicializados correctamente');
+    return true;
+  }
+
+  console.log('Los datos ya existen en Firestore');
+  return false;
+}
+
+// ============ UTILIDADES ============
+
+export function calcularTotalesFromDeudas(deudas: Deuda[]) {
+  const deudaTotal = deudas.reduce((sum, d) => sum + d.saldoActual, 0);
+  const deudaInicial = deudas.reduce((sum, d) => sum + d.saldoInicial, 0);
+  const pagosMinimos = deudas.filter(d => !d.liquidada).reduce((sum, d) => sum + d.pagoMinimo, 0);
+  const porcentajePagado = deudaInicial > 0 ? ((deudaInicial - deudaTotal) / deudaInicial) * 100 : 0;
+
+  return {
+    deudaTotal,
+    deudaInicial,
+    pagosMinimos,
+    porcentajePagado,
+    deudaPagada: deudaInicial - deudaTotal,
+  };
+}

@@ -3,15 +3,7 @@
 import { useState, useEffect } from 'react';
 import { User, Users, Wallet } from 'lucide-react';
 import { presupuestosPersonales, PRESUPUESTO_VARIABLE } from '@/lib/data';
-
-interface Gasto {
-  id: string;
-  fecha: string;
-  descripcion: string;
-  monto: number;
-  categoria: string;
-  titular: string;
-}
+import { subscribeToGastos, Gasto } from '@/lib/firestore';
 
 function formatMoney(amount: number) {
   return new Intl.NumberFormat('es-MX', {
@@ -24,40 +16,17 @@ function formatMoney(amount: number) {
 
 export default function PresupuestosPersonales() {
   const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Cargar gastos del localStorage
-    const savedGastos = localStorage.getItem('finanzas-gastos');
-    if (savedGastos) {
-      setGastos(JSON.parse(savedGastos));
-    }
+    // Subscribe to real-time gastos updates from Firebase
+    const unsubscribe = subscribeToGastos((gastosActualizados) => {
+      setGastos(gastosActualizados);
+      setLoading(false);
+    });
 
-    // Escuchar cambios en localStorage (cuando el chat registra un gasto)
-    const handleStorageChange = () => {
-      const updated = localStorage.getItem('finanzas-gastos');
-      if (updated) {
-        setGastos(JSON.parse(updated));
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // También revisar cada 2 segundos por si el chat agregó algo
-    const interval = setInterval(() => {
-      const updated = localStorage.getItem('finanzas-gastos');
-      if (updated) {
-        const parsed = JSON.parse(updated);
-        if (parsed.length !== gastos.length) {
-          setGastos(parsed);
-        }
-      }
-    }, 2000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [gastos.length]);
+    return () => unsubscribe();
+  }, []);
 
   // Filtrar gastos del mes actual
   const mesActual = new Date().toISOString().slice(0, 7); // "2026-01"
@@ -99,6 +68,33 @@ export default function PresupuestosPersonales() {
 
   const totalGastado = gastosPorTitular.alejandra + gastosPorTitular.ricardo + gastosPorTitular.compartido;
   const totalRestante = PRESUPUESTO_VARIABLE - totalGastado;
+
+  if (loading) {
+    return (
+      <div className="glass-card animate-pulse">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#252931]" />
+            <div>
+              <div className="h-4 w-40 bg-[#252931] rounded mb-2" />
+              <div className="h-3 w-28 bg-[#252931] rounded" />
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="h-6 w-24 bg-[#252931] rounded mb-1" />
+            <div className="h-3 w-20 bg-[#252931] rounded" />
+          </div>
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="p-4 bg-white/5 rounded-xl">
+              <div className="h-16 bg-[#252931] rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-card">
