@@ -6,8 +6,8 @@ import Navbar from '@/components/Navbar';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Finanzas Ale & Ricardo',
-  description: 'App para controlar gastos y pagar deudas',
+  title: 'Finanzas Ale & Ricardo 2026',
+  description: 'Dashboard financiero para control de gastos y pago de deudas',
 };
 
 export default function RootLayout({
@@ -18,9 +18,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        <div className="min-h-screen">
+        <div className="min-h-screen bg-[#0f0f1a]">
           <Navbar />
-          <main className="lg:ml-64 pt-16 lg:pt-0 pb-20 lg:pb-0 px-4 lg:px-8 py-6">
+          <main className="pt-20 lg:pt-24 pb-24 lg:pb-8 px-4 lg:px-8 max-w-[1600px] mx-auto">
             {children}
           </main>
         </div>
