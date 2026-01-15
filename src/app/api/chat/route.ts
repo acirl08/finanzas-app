@@ -9,20 +9,43 @@ export async function POST(request: Request) {
   try {
     const { messages, systemContext } = await request.json();
 
-    // Filtrar solo mensajes de usuario y asistente (no el mensaje inicial del sistema)
-    const claudeMessages = messages
-      .filter((msg: any) => msg.role === 'user' || msg.role === 'assistant')
-      .map((msg: any) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+    // Construir el historial de mensajes para Claude
+    // Necesitamos alternar user/assistant, empezando con user
+    const claudeMessages: Array<{role: 'user' | 'assistant', content: string}> = [];
 
-    // Asegurar que el primer mensaje sea del usuario
-    if (claudeMessages.length === 0 || claudeMessages[0].role !== 'user') {
+    for (const msg of messages) {
+      // Solo incluir mensajes de usuario y asistente
+      if (msg.role === 'user' || msg.role === 'assistant') {
+        // Si es el primer mensaje y no es del usuario, lo saltamos
+        if (claudeMessages.length === 0 && msg.role === 'assistant') {
+          continue;
+        }
+        // Evitar duplicados consecutivos del mismo rol
+        if (claudeMessages.length > 0 && claudeMessages[claudeMessages.length - 1].role === msg.role) {
+          continue;
+        }
+        claudeMessages.push({
+          role: msg.role,
+          content: msg.content,
+        });
+      }
+    }
+
+    // Si no hay mensajes válidos, retornar error
+    if (claudeMessages.length === 0) {
       return NextResponse.json({
-        message: '¡Hola! ¿En qué te puedo ayudar con tus finanzas?'
+        message: 'Por favor escribe una pregunta para que pueda ayudarte.'
       });
     }
+
+    // Asegurar que termine con un mensaje de usuario
+    if (claudeMessages[claudeMessages.length - 1].role !== 'user') {
+      return NextResponse.json({
+        message: 'Por favor escribe una pregunta.'
+      });
+    }
+
+    console.log('Sending to Claude:', JSON.stringify(claudeMessages, null, 2));
 
     const response = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
