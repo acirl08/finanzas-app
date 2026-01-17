@@ -33,15 +33,15 @@ export default function SavingsGoals() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [newGoal, setNewGoal] = useState({ nombre: '', montoObjetivo: '' });
-  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     // Cargar metas del localStorage
     const saved = localStorage.getItem('savings-goals');
     if (saved) {
       setGoals(JSON.parse(saved));
     }
-    setLoading(false);
   }, []);
 
   const saveGoals = (newGoals: SavingsGoal[]) => {
@@ -81,7 +81,7 @@ export default function SavingsGoals() {
     saveGoals(goals.filter(g => g.id !== id));
   };
 
-  if (loading) {
+  if (!mounted) {
     return (
       <div className="glass-card animate-pulse">
         <div className="h-48 bg-[#252931] rounded-xl" />

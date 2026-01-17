@@ -14,8 +14,10 @@ export default function PWAWidget() {
   const [showInstructions, setShowInstructions] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     // Detectar si es iOS
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(ios);
@@ -64,8 +66,8 @@ export default function PWAWidget() {
     localStorage.setItem('pwa-widget-dismissed', new Date().toISOString());
   };
 
-  // No mostrar si ya está instalada o fue descartada
-  if (isInstalled || dismissed) {
+  // No mostrar si no está montado, ya está instalada o fue descartada
+  if (!mounted || isInstalled || dismissed) {
     return null;
   }
 
