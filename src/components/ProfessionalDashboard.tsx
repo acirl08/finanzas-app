@@ -127,6 +127,12 @@ export default function ProfessionalDashboard() {
   const [editingGasto, setEditingGasto] = useState<Gasto | null>(null);
   const [editForm, setEditForm] = useState<{ categoria: string; titular: string; monto: string; descripcion: string }>({ categoria: '', titular: '', monto: '', descripcion: '' });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Establecer mounted después del primer render para evitar errores de hidratación
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Initialize Firebase data if empty, then load charts
   useEffect(() => {
@@ -391,6 +397,25 @@ export default function ProfessionalDashboard() {
     if (porcentaje <= 100) return statusColors.yellow;
     return statusColors.red;
   };
+
+  // Mostrar skeleton mientras se monta para evitar errores de hidratación
+  if (!mounted) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <MetricCardSkeleton />
+          <MetricCardSkeleton />
+          <MetricCardSkeleton />
+          <MetricCardSkeleton />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <MetricCardSkeleton />
+          <MetricCardSkeleton />
+          <MetricCardSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
