@@ -50,8 +50,11 @@ export default function PaymentReminders() {
   const [showAll, setShowAll] = useState(false);
   const [pagoForm, setPagoForm] = useState<PagoForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+
     // Cargar dismissed del localStorage
     const savedDismissed = localStorage.getItem('dismissed-reminders');
     if (savedDismissed) {
@@ -92,6 +95,11 @@ export default function PaymentReminders() {
 
     setReminders(nuevosReminders);
   }, []);
+
+  // Evitar problemas de hidratación
+  if (!mounted) {
+    return null;
+  }
 
   const dismissReminder = (id: string) => {
     const newDismissed = [...dismissed, id];
