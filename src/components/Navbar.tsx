@@ -10,9 +10,6 @@ import {
   Settings,
   Menu,
   X,
-  Search,
-  Bell,
-  ChevronDown,
   Sparkles
 } from 'lucide-react';
 
@@ -62,32 +59,12 @@ export default function Navbar() {
             </nav>
           </div>
 
-          {/* Right Side */}
-          <div className="flex items-center gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-              <input
-                type="text"
-                placeholder="Buscar..."
-                className="w-48 pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
-              />
+          {/* Right Side - User Display (static, not clickable) */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center">
+              <span className="text-white font-semibold text-sm">A</span>
             </div>
-
-            {/* Notifications */}
-            <button className="relative p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-              <Bell className="w-5 h-5 text-white/60" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
-
-            {/* Profile */}
-            <button className="flex items-center gap-2 p-1.5 pr-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">A</span>
-              </div>
-              <span className="text-sm text-white/80">Ale & Ricardo</span>
-              <ChevronDown className="w-4 h-4 text-white/40" />
-            </button>
+            <span className="text-sm text-white/80">Ale & Ricardo</span>
           </div>
         </div>
       </header>
@@ -101,17 +78,12 @@ export default function Navbar() {
             </div>
             <span className="font-bold text-white">Finanzas</span>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-xl bg-white/5">
-              <Bell className="w-5 h-5 text-white/60" />
-            </button>
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-xl bg-white/5"
-            >
-              {isOpen ? <X className="w-5 h-5 text-white" /> : <Menu className="w-5 h-5 text-white" />}
-            </button>
-          </div>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-2 rounded-xl bg-white/5"
+          >
+            {isOpen ? <X className="w-5 h-5 text-white" /> : <Menu className="w-5 h-5 text-white" />}
+          </button>
         </div>
 
         {/* Mobile Menu */}

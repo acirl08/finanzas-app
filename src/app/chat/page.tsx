@@ -30,11 +30,11 @@ export default function ChatPage() {
             </div>
             <div className="space-y-2">
               {[
-                '¿Puedo comprar algo de $500?',
+                'Pagué $5,000 a Rappi',
+                'Registra $150 en restaurantes',
                 '¿Cómo vamos con las deudas?',
+                'El saldo de Nu es $5,000',
                 '¿Cuánto me queda este mes?',
-                'Dame motivación',
-                '¿Qué deuda pago primero?',
               ].map((suggestion, i) => (
                 <button
                   key={i}
@@ -48,9 +48,9 @@ export default function ChatPage() {
 
           <div className="glass-card-dark">
             <p className="text-xs text-white/40 mb-2">Powered by</p>
-            <p className="text-sm text-white font-medium">Claude AI</p>
+            <p className="text-sm text-white font-medium">Claude AI + Tool Use</p>
             <p className="text-xs text-white/50 mt-2">
-              El asistente conoce tu situación financiera y puede darte consejos personalizados.
+              El asistente puede ejecutar acciones reales: registrar pagos, gastos y actualizar saldos.
             </p>
           </div>
         </div>

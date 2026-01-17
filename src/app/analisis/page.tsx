@@ -14,6 +14,11 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line } from 'recharts';
 import { deudasIniciales, suscripciones, INGRESO_MENSUAL, calcularTotales, calcularGastosFijos } from '@/lib/data';
+import GastosPieChart from '@/components/GastosPieChart';
+import GastosTrendChart from '@/components/GastosTrendChart';
+import DebtSimulator from '@/components/DebtSimulator';
+import DebtPaymentHistory from '@/components/DebtPaymentHistory';
+import SavingsGoals from '@/components/SavingsGoals';
 
 function formatMoney(amount: number) {
   return new Intl.NumberFormat('es-MX', {
@@ -462,6 +467,21 @@ export default function AnalisisPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* New Charts Row - Gastos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <GastosPieChart />
+        <GastosTrendChart />
+      </div>
+
+      {/* Debt Simulator */}
+      <DebtSimulator />
+
+      {/* Payment History & Savings Goals */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <DebtPaymentHistory />
+        <SavingsGoals />
       </div>
     </div>
   );

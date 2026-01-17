@@ -26,6 +26,8 @@ export interface Gasto {
   monto: number;
   categoria: string;
   titular: 'alejandra' | 'ricardo' | 'compartido';
+  esFijo?: boolean; // true = gasto fijo (renta, luz), false/undefined = variable
+  conVales?: boolean; // true = se paga con vales de despensa (super, frutas)
   createdAt?: Timestamp;
 }
 
@@ -69,7 +71,7 @@ export async function getDeudas(): Promise<Deuda[]> {
   })) as Deuda[];
 }
 
-export function subscribeToDeudas(callback: (deudas: Deuda[]) => void) {
+export function subscribeToDeudas(callback: (deudas: Deuda[]) => void, onError?: (error: Error) => void) {
   return onSnapshot(
     query(collection(db, DEUDAS_COLLECTION), orderBy('prioridad', 'asc')),
     (snapshot) => {
@@ -78,6 +80,10 @@ export function subscribeToDeudas(callback: (deudas: Deuda[]) => void) {
         ...doc.data()
       })) as Deuda[];
       callback(deudas);
+    },
+    (error) => {
+      console.error('Error subscribing to deudas:', error);
+      if (onError) onError(error);
     }
   );
 }
@@ -136,7 +142,7 @@ export async function getGastos(mes?: string): Promise<Gasto[]> {
   return gastos;
 }
 
-export function subscribeToGastos(callback: (gastos: Gasto[]) => void) {
+export function subscribeToGastos(callback: (gastos: Gasto[]) => void, onError?: (error: Error) => void) {
   return onSnapshot(
     query(collection(db, GASTOS_COLLECTION), orderBy('fecha', 'desc')),
     (snapshot) => {
@@ -145,6 +151,10 @@ export function subscribeToGastos(callback: (gastos: Gasto[]) => void) {
         ...doc.data()
       })) as Gasto[];
       callback(gastos);
+    },
+    (error) => {
+      console.error('Error subscribing to gastos:', error);
+      if (onError) onError(error);
     }
   );
 }
@@ -159,6 +169,11 @@ export async function addGasto(gasto: Omit<Gasto, 'id' | 'createdAt'>) {
 
 export async function deleteGasto(id: string) {
   await deleteDoc(doc(db, GASTOS_COLLECTION, id));
+}
+
+export async function updateGasto(id: string, data: Partial<Omit<Gasto, 'id' | 'createdAt'>>) {
+  const gastoRef = doc(db, GASTOS_COLLECTION, id);
+  await updateDoc(gastoRef, data);
 }
 
 // ============ PAGOS ============

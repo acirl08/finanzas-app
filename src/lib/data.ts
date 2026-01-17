@@ -137,25 +137,102 @@ export const suscripciones: Suscripcion[] = [
 
 export const INGRESO_MENSUAL = 109000;
 export const VALES_DESPENSA = 4800;
-export const PRESUPUESTO_VARIABLE = 15000;
 
-// Presupuestos personales para gustos (del presupuesto variable de $15,000)
+// ============================================
+// ESTRUCTURA DE PRESUPUESTO MENSUAL
+// ============================================
+
+// VALES DE DESPENSA ($4,800) - Solo para súper/alimentos
+export const PRESUPUESTO_DESPENSA = 4800;
+
+// GASTOS ESENCIALES ($8,000) - Necesidades que no cubren los vales
+export const PRESUPUESTO_ESENCIALES = 8000;
+
+// GUSTOS ($7,000) - Dividido entre los dos + compartido
+export const PRESUPUESTO_GUSTOS = 7000;
+
+// Total variable = $15,000 (esenciales + gustos, sin contar vales)
+export const PRESUPUESTO_VARIABLE = PRESUPUESTO_ESENCIALES + PRESUPUESTO_GUSTOS;
+
+// Distribución del presupuesto variable ($15,000)
 export const presupuestosPersonales = {
-  alejandra: 5000,  // Dinero libre para Ale
-  ricardo: 5000,    // Dinero libre para Ricardo
-  compartido: 5000, // Para salidas y gustos juntos
+  alejandra: 5000,   // Presupuesto mensual Ale
+  ricardo: 5000,     // Presupuesto mensual Ricardo
+  compartido: 5000,  // Gastos compartidos
 };
 
-export const categorias = [
-  'comida',
-  'transporte',
-  'entretenimiento',
-  'salud',
-  'ropa',
-  'hogar',
-  'servicios',
-  'otros',
+// ============================================
+// CATEGORÍAS ORGANIZADAS
+// ============================================
+
+// Categorías que se pagan con VALES DE DESPENSA
+export const categoriasVales = [
+  'super',           // Despensa del súper
+  'frutas_verduras', // Frutas y verduras
 ];
+
+// Categorías ESENCIALES (necesidades, no gustos)
+export const categoriasEsenciales = [
+  'gasolina',        // Gasolina adicional
+  'salud',           // Medicinas, doctor, dentista
+  'hogar',           // Cosas para la casa (limpieza, etc.)
+  'transporte',      // Uber, estacionamiento
+  'imprevistos',     // Emergencias
+];
+
+// Categorías de GUSTOS (no esenciales)
+export const categoriasGustos = [
+  'restaurantes',    // Comida fuera
+  'entretenimiento', // Cine, conciertos, eventos
+  'ropa',            // Ropa y accesorios
+  'cafe_snacks',     // Cafés, antojos
+  'personal',        // Hobbies, belleza, etc.
+  'otros_gustos',    // Otros gustos
+];
+
+// Todas las categorías juntas (para el formulario)
+export const categorias = [
+  // Vales
+  'super',
+  'frutas_verduras',
+  // Esenciales
+  'gasolina',
+  'salud',
+  'hogar',
+  'transporte',
+  'imprevistos',
+  // Gustos
+  'restaurantes',
+  'entretenimiento',
+  'ropa',
+  'cafe_snacks',
+  'personal',
+  'otros_gustos',
+];
+
+// Labels bonitos para mostrar
+export const categoriaLabels: Record<string, string> = {
+  super: 'Súper / Despensa',
+  frutas_verduras: 'Frutas y Verduras',
+  gasolina: 'Gasolina',
+  salud: 'Salud',
+  hogar: 'Hogar',
+  transporte: 'Transporte',
+  imprevistos: 'Imprevistos',
+  restaurantes: 'Restaurantes',
+  entretenimiento: 'Entretenimiento',
+  ropa: 'Ropa',
+  cafe_snacks: 'Café / Snacks',
+  personal: 'Personal',
+  otros_gustos: 'Otros',
+};
+
+// Helper para saber el tipo de categoría
+export function getTipoCategoria(categoria: string): 'vales' | 'esencial' | 'gusto' {
+  if (categoriasVales.includes(categoria)) return 'vales';
+  if (categoriasEsenciales.includes(categoria)) return 'esencial';
+  return 'gusto';
+}
 
 export function calcularTotales(deudas: Deuda[]) {
   const deudaTotal = deudas.reduce((sum, d) => sum + d.saldoActual, 0);

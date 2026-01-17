@@ -1,5 +1,5 @@
-import Dashboard from '@/components/Dashboard';
+import ProfessionalDashboard from '@/components/ProfessionalDashboard';
 
 export default function Home() {
-  return <Dashboard />;
+  return <ProfessionalDashboard />;
 }

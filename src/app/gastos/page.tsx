@@ -1,17 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Receipt, Filter, Calendar, TrendingDown, Search, Download, ChevronRight, Plus } from 'lucide-react';
+import { Receipt, Filter, Calendar, TrendingDown, Search, Plus } from 'lucide-react';
 import Link from 'next/link';
-
-interface Gasto {
-  id: string;
-  fecha: string;
-  descripcion: string;
-  monto: number;
-  categoria: string;
-  titular: string;
-}
+import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { PRESUPUESTO_VARIABLE } from '@/lib/data';
 
 function formatMoney(amount: number) {
   return new Intl.NumberFormat('es-MX', {
@@ -49,25 +42,106 @@ function getCategoryColor(categoria: string) {
   return colors[categoria] || 'from-gray-500 to-slate-500';
 }
 
+function formatDate(fecha: string) {
+  const date = new Date(fecha + 'T00:00:00');
+  return date.toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
 export default function GastosPage() {
   const [filtro, setFiltro] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Cargar gastos del localStorage
+  // Cargar gastos de Firebase
   useEffect(() => {
-    const savedGastos = localStorage.getItem('finanzas-gastos');
-    if (savedGastos) {
-      setGastos(JSON.parse(savedGastos));
-    }
+    const unsubscribe = subscribeToGastos((gastosActualizados) => {
+      setGastos(gastosActualizados);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const gastosFiltrados = gastos
+  // Filtrar gastos del mes actual
+  const today = new Date();
+  const mesActual = today.toISOString().slice(0, 7);
+  const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
+
+  const gastosFiltrados = gastosDelMes
     .filter(g => filtro === 'todos' || g.titular === filtro)
     .filter(g => g.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
-  const totalMes = gastos.reduce((sum, g) => sum + g.monto, 0);
+  const totalMes = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
+  const restante = PRESUPUESTO_VARIABLE - totalMes;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Historial de Gastos</h1>
+            <p className="text-white/50">Preparando tu historial...</p>
+          </div>
+          <div className="h-10 w-36 bg-white/10 rounded-xl animate-pulse" />
+        </div>
+
+        {/* Skeleton Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-card animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-white/10 rounded w-24" />
+                  <div className="h-8 bg-white/10 rounded w-32" />
+                  <div className="h-3 bg-white/10 rounded w-20" />
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-white/10" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton Search/Filters */}
+        <div className="glass-card animate-pulse">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="h-10 bg-white/10 rounded-xl flex-1" />
+            <div className="flex gap-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-10 w-24 bg-white/10 rounded-xl" />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Skeleton Transactions */}
+        <div className="glass-card animate-pulse">
+          <div className="flex items-center justify-between mb-4">
+            <div className="h-5 bg-white/10 rounded w-28" />
+            <div className="h-4 bg-white/10 rounded w-20" />
+          </div>
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/10" />
+                  <div className="space-y-2">
+                    <div className="h-4 bg-white/10 rounded w-32" />
+                    <div className="h-3 bg-white/10 rounded w-48" />
+                  </div>
+                </div>
+                <div className="h-6 bg-white/10 rounded w-20" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -75,7 +149,7 @@ export default function GastosPage() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Historial de Gastos</h1>
-          <p className="text-white/50">Gastos variables registrados</p>
+          <p className="text-white/50">Gastos variables de {today.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</p>
         </div>
         <Link
           href="/registrar"
@@ -91,7 +165,7 @@ export default function GastosPage() {
         <div className="glass-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-white/50 text-sm">Total registrado</p>
+              <p className="text-white/50 text-sm">Total del mes</p>
               <p className="text-2xl font-bold text-white mt-1">{formatMoney(totalMes)}</p>
               <p className="text-xs text-white/40 mt-1">Gastos variables</p>
             </div>
@@ -105,8 +179,8 @@ export default function GastosPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/50 text-sm">Transacciones</p>
-              <p className="text-2xl font-bold text-white mt-1">{gastos.length}</p>
-              <p className="text-xs text-white/40 mt-1">Registradas</p>
+              <p className="text-2xl font-bold text-white mt-1">{gastosDelMes.length}</p>
+              <p className="text-xs text-white/40 mt-1">Este mes</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
               <Receipt className="w-6 h-6 text-blue-400" />
@@ -117,18 +191,20 @@ export default function GastosPage() {
         <div className="glass-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-white/50 text-sm">Presupuesto variable</p>
-              <p className="text-2xl font-bold text-green-400 mt-1">{formatMoney(15000 - totalMes)}</p>
-              <p className="text-xs text-white/40 mt-1">Restante de $15,000</p>
+              <p className="text-white/50 text-sm">Presupuesto restante</p>
+              <p className={`text-2xl font-bold mt-1 ${restante >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {formatMoney(restante)}
+              </p>
+              <p className="text-xs text-white/40 mt-1">De {formatMoney(PRESUPUESTO_VARIABLE)}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-green-400" />
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${restante >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+              <Calendar className={`w-6 h-6 ${restante >= 0 ? 'text-green-400' : 'text-red-400'}`} />
             </div>
           </div>
         </div>
       </div>
 
-      {gastos.length > 0 ? (
+      {gastosDelMes.length > 0 ? (
         <>
           {/* Search and Filters */}
           <div className="glass-card">
@@ -185,7 +261,7 @@ export default function GastosPage() {
                     <div>
                       <p className="font-medium text-white">{gasto.descripcion}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-white/40">{gasto.fecha}</span>
+                        <span className="text-xs text-white/40">{formatDate(gasto.fecha)}</span>
                         <span className="w-1 h-1 rounded-full bg-white/20" />
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                           gasto.titular === 'alejandra' ? 'bg-pink-500/20 text-pink-400' :
@@ -194,6 +270,8 @@ export default function GastosPage() {
                         }`}>
                           {gasto.titular.charAt(0).toUpperCase() + gasto.titular.slice(1)}
                         </span>
+                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                        <span className="text-xs text-white/30 capitalize">{gasto.categoria}</span>
                       </div>
                     </div>
                   </div>
@@ -215,10 +293,10 @@ export default function GastosPage() {
           <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-6">
             <Receipt className="w-10 h-10 text-white/20" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">No hay gastos registrados</h3>
+          <h3 className="text-xl font-semibold text-white mb-2">Sin gastos este mes</h3>
           <p className="text-white/50 mb-6 max-w-md mx-auto">
-            Registra tus gastos variables para llevar un mejor control de tu dinero.
-            También puedes usar el asistente de chat para registrar gastos rápidamente.
+            No has registrado gastos variables en {today.toLocaleDateString('es-MX', { month: 'long' })}.
+            Registra tus gastos para llevar un mejor control de tu dinero.
           </p>
           <Link
             href="/registrar"

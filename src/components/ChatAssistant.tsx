@@ -1,61 +1,26 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, Image, X, Camera } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  image?: string; // base64 image
 }
-
-const SYSTEM_CONTEXT = `Eres un asistente financiero personal para Alejandra y Ricardo, una pareja en México que está trabajando para salir de deudas.
-
-CONTEXTO FINANCIERO:
-- Ingreso mensual combinado: $109,000 MXN
-- Vales de despensa: $4,800 (para comida)
-- Deuda total inicial: $491,442 MXN
-- Disponible mensual para pagar deuda extra: $38,450 MXN
-- Meta: Libres de deudas de tarjetas para noviembre 2026
-
-DEUDAS (ordenadas por prioridad - método avalancha):
-1. Rappi - $14,403 - CAT 157.3%
-2. Nu (Alejandra) - $6,245 - CAT 156.8%
-3. HEB Afirme - $39,834 - CAT 131.9%
-4. Amex Gold - $91,622 - CAT 82.4%
-5. Amex Platinum (Ricardo) - $870 - CAT 78%
-6. Nu (Ricardo) - $9,917 - CAT 63%
-7. Santander LikeU - $66,138 - CAT 60.5%
-8. Crédito Personal - $91,767 - CAT 38%
-9. BBVA (Ricardo) - $121,586 - CAT 32.5%
-10. Banorte/Invex - $49,060 - CAT 30%
-
-GASTOS FIJOS:
-- Renta: $12,700
-- Carro: $13,000 (4 años restantes)
-- Crédito personal: $6,000 fijos
-- Gasolina: $1,500
-- Luz: $1,250/mes ($2,500 bimestral)
-- Gas: $450/mes ($900 bimestral)
-- Suscripciones: $3,551 (Claude Max, YouTube, Spotify, Netflix, etc.)
-
-REGLAS:
-1. Responde en español
-2. Sé directo y práctico
-3. Si preguntan sobre un gasto, evalúa si es necesario o si pueden evitarlo
-4. Motívalos pero sé realista
-5. Si registran un gasto en tarjeta de crédito, recuérdales que el plan es NO usar las tarjetas
-6. Si preguntan si pueden comprar algo, calcula el impacto en su plan`;
 
 export default function ChatAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: '¡Hola! Soy tu asistente financiero. Puedo ayudarte con:\n\n• Revisar si un gasto está dentro del presupuesto\n• Darte consejos sobre cómo ahorrar\n• Responder dudas sobre el plan de pago de deudas\n• Motivarte cuando lo necesites\n\n¿En qué te puedo ayudar hoy?',
+      content: '¡Hola! Soy tu asistente financiero y puedo ejecutar acciones reales:\n\n💰 **Registrar pagos**: "Pagué $5,000 a Rappi"\n📝 **Registrar gastos**: "Registra $200 en restaurantes"\n🔄 **Actualizar saldos**: "El saldo de Nu ahora es $3,000"\n📊 **Ver resumen**: "¿Cómo vamos?"\n📸 **Leer tickets**: Sube una foto de tu ticket\n\n¿Qué quieres hacer?',
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -65,13 +30,46 @@ export default function ChatAssistant() {
     scrollToBottom();
   }, [messages]);
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar que sea imagen
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona una imagen');
+      return;
+    }
+
+    // Validar tamaño (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen es muy grande. Máximo 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setSelectedImage(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && !selectedImage) || isLoading) return;
 
-    const userMessage = input.trim();
+    const userMessage = input.trim() || (selectedImage ? 'Analiza este ticket' : '');
+    const imageToSend = selectedImage;
+
     setInput('');
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+    setSelectedImage(null);
+
+    // Mostrar mensaje del usuario con imagen si la hay
+    setMessages((prev) => [...prev, {
+      role: 'user',
+      content: userMessage,
+      image: imageToSend || undefined
+    }]);
     setIsLoading(true);
 
     try {
@@ -80,7 +78,7 @@ export default function ChatAssistant() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...messages, { role: 'user', content: userMessage }],
-          systemContext: SYSTEM_CONTEXT,
+          image: imageToSend,
         }),
       });
 
@@ -111,7 +109,7 @@ export default function ChatAssistant() {
         </div>
         <div>
           <h2 className="font-bold text-white">Asistente Financiero</h2>
-          <p className="text-xs text-white/40">Powered by Claude</p>
+          <p className="text-xs text-white/40">Powered by Claude + Vision</p>
         </div>
         <div className="ml-auto flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -146,6 +144,16 @@ export default function ChatAssistant() {
                   : 'bg-white/10 text-white rounded-tl-sm'
               }`}
             >
+              {/* Mostrar imagen si existe */}
+              {message.image && (
+                <div className="mb-2">
+                  <img
+                    src={message.image}
+                    alt="Ticket"
+                    className="max-w-[200px] rounded-lg"
+                  />
+                </div>
+              )}
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
             </div>
           </div>
@@ -158,7 +166,9 @@ export default function ChatAssistant() {
             <div className="bg-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
               <div className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                <span className="text-sm text-white/50">Pensando...</span>
+                <span className="text-sm text-white/50">
+                  {selectedImage ? 'Analizando imagen...' : 'Pensando...'}
+                </span>
               </div>
             </div>
           </div>
@@ -166,20 +176,60 @@ export default function ChatAssistant() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Image Preview */}
+      {selectedImage && (
+        <div className="px-2 py-2 border-t border-white/10">
+          <div className="relative inline-block">
+            <img
+              src={selectedImage}
+              alt="Preview"
+              className="h-20 rounded-lg"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+            >
+              <X className="w-4 h-4 text-white" />
+            </button>
+          </div>
+          <p className="text-xs text-white/50 mt-1">Ticket listo para analizar</p>
+        </div>
+      )}
+
       {/* Input */}
       <form onSubmit={handleSubmit} className="pt-4 border-t border-white/10">
         <div className="flex gap-2">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+
+          {/* Image button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-50 transition-all"
+            title="Subir imagen de ticket"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
+
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu pregunta..."
+            placeholder={selectedImage ? "Describe el ticket o envía directo..." : "Escribe tu mensaje..."}
             className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
             disabled={isLoading}
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || (!input.trim() && !selectedImage)}
             className="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
           >
             <Send className="w-5 h-5" />

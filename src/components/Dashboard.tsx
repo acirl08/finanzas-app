@@ -5,27 +5,28 @@ import { Deuda, Suscripcion } from '@/types';
 import { calcularGastosFijos, INGRESO_MENSUAL, suscripciones as defaultSuscripciones } from '@/lib/data';
 import { subscribeToDeudas, calcularTotalesFromDeudas, initializeFirestoreData } from '@/lib/firestore';
 import {
-  TrendingUp,
   TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
-  CreditCard,
   Wallet,
-  RefreshCw,
-  Plus,
   ChevronRight,
-  Zap,
   Target,
   Calendar,
-  DollarSign,
   MoreHorizontal,
   Info,
   Pin,
-  Maximize2,
-  ExternalLink
+  Maximize2
 } from 'lucide-react';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, ReferenceLine } from 'recharts';
 import PresupuestosPersonales from './PresupuestosPersonales';
+import DailyBudgetCard from './DailyBudgetCard';
+import ProgressHeroCard from './ProgressHeroCard';
+import FreedomCountdown from './FreedomCountdown';
+import BudgetAlertBanner from './BudgetAlertBanner';
+import FutureSelfCard from './FutureSelfCard';
+import CelebrationModal from './CelebrationModal';
+import PaymentPlanExplainer from './PaymentPlanExplainer';
+import BudgetOverview from './BudgetOverview';
 
 function formatMoney(amount: number) {
   return new Intl.NumberFormat('es-MX', {
@@ -270,16 +271,21 @@ export default function Dashboard() {
   const [deudas, setDeudas] = useState<Deuda[]>([]);
   const [loading, setLoading] = useState(true);
   const [suscripciones] = useState<Suscripcion[]>(defaultSuscripciones);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationType, setCelebrationType] = useState<'under_budget' | 'debt_paid' | 'streak' | 'milestone'>('milestone');
+  const [celebrationData, setCelebrationData] = useState<any>({});
 
-  // Initialize Firebase and subscribe to real-time updates
+  // Subscribe to real-time updates from Firebase
   useEffect(() => {
-    // Initialize data if needed
-    initializeFirestoreData().catch(console.error);
-
     // Subscribe to real-time updates
     const unsubscribe = subscribeToDeudas((deudasActualizadas) => {
-      setDeudas(deudasActualizadas);
-      setLoading(false);
+      // If no data in Firebase, initialize it once
+      if (deudasActualizadas.length === 0) {
+        initializeFirestoreData().catch(console.error);
+      } else {
+        setDeudas(deudasActualizadas);
+        setLoading(false);
+      }
     });
 
     return () => unsubscribe();
@@ -313,6 +319,39 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Celebration Modal */}
+      <CelebrationModal
+        isOpen={showCelebration}
+        onClose={() => setShowCelebration(false)}
+        type={celebrationType}
+        data={celebrationData}
+      />
+
+      {/* Budget Alert Banner - Shows when approaching or over budget */}
+      <BudgetAlertBanner />
+
+      {/* Hero Section - Progress Focus + Daily Budget */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Progress Hero Card - Main focus on progress, not debt */}
+        <div className="lg:col-span-2">
+          <ProgressHeroCard />
+        </div>
+
+        {/* Daily Budget Card - One simple number */}
+        <div className="lg:col-span-1">
+          <DailyBudgetCard />
+        </div>
+      </div>
+
+      {/* Freedom Countdown */}
+      <FreedomCountdown />
+
+      {/* Budget Overview - Vales, Esenciales, Gustos */}
+      <BudgetOverview />
+
+      {/* Payment Plan Explainer - Responde la pregunta "¿Cómo funciona?" */}
+      <PaymentPlanExplainer />
+
       {/* Top Stats Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Total Balance Card */}
@@ -334,14 +373,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="flex gap-3 mt-6">
-            <button className="btn-secondary bg-white/20 border-white/30 text-white text-sm px-4 py-2">
-              <RefreshCw className="w-4 h-4 inline mr-2" />
-              Actualizar
-            </button>
-            <button className="btn-icon bg-white/20 border-white/30">
-              <Zap className="w-4 h-4 text-white" />
-            </button>
+          <div className="mt-6 pt-4 border-t border-white/10">
+            <p className="text-xs text-white/50">
+              Los datos se actualizan automáticamente desde Firebase
+            </p>
           </div>
         </div>
 
@@ -402,7 +437,7 @@ export default function Dashboard() {
               <span className="text-sm text-[#9CA3AF]">Disponible para Deudas</span>
               <span className="text-[#6B7280] text-sm">/ $</span>
             </div>
-            <span className="badge badge-success">+Meta</span>
+            <span className="text-xs text-[#6EE7B7]">En camino</span>
           </div>
           <p className="text-xs text-[#6B7280] mb-3">Cada mes para atacar deudas</p>
 
@@ -650,61 +685,76 @@ export default function Dashboard() {
               const isFirst = index === 0;
               const isHighCAT = deuda.cat > 100;
               const isMediumCAT = deuda.cat > 50 && deuda.cat <= 100;
+              // Loss aversion: Calculate monthly interest being "lost"
+              const monthlyInterestLoss = Math.round((deuda.saldoActual * (deuda.cat / 100)) / 12);
 
               return (
                 <div
                   key={deuda.id}
-                  className={`grid grid-cols-12 gap-2 px-4 py-3 rounded-xl transition-all cursor-pointer group ${
+                  className={`rounded-xl transition-all cursor-pointer group ${
                     isFirst
                       ? 'bg-gradient-to-r from-[#F87171]/20 to-[#FBBF24]/10 border border-[#F87171]/30 hover:border-[#F87171]/50'
                       : 'bg-[#1C2128] hover:bg-[#252931] border border-transparent hover:border-[#30363D]'
                   }`}
                 >
-                  {/* Priority Number */}
-                  <div className="col-span-1 flex items-center">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm text-white ${
-                      isHighCAT ? 'bg-[#F87171]' :
-                      isMediumCAT ? 'bg-[#FBBF24]' : 'bg-[#6EE7B7]'
-                    }`}>
-                      {deuda.prioridad}
+                  <div className="grid grid-cols-12 gap-2 px-4 py-3">
+                    {/* Priority Number */}
+                    <div className="col-span-1 flex items-center">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm text-white ${
+                        isHighCAT ? 'bg-[#F87171]' :
+                        isMediumCAT ? 'bg-[#FBBF24]' : 'bg-[#6EE7B7]'
+                      }`}>
+                        {deuda.prioridad}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Debt Name & Owner */}
-                  <div className="col-span-4 flex flex-col justify-center">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-white group-hover:text-[#8B5CF6] transition-colors">
-                        {deuda.nombre}
-                      </span>
-                      {isFirst && (
-                        <span className="px-2 py-0.5 bg-[#F87171]/20 text-[#F87171] text-xs rounded-full font-medium">
-                          Atacar
+                    {/* Debt Name & Owner */}
+                    <div className="col-span-4 flex flex-col justify-center">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-white group-hover:text-[#8B5CF6] transition-colors">
+                          {deuda.nombre}
                         </span>
-                      )}
+                        {isFirst && (
+                          <span className="px-2 py-0.5 bg-[#F87171]/20 text-[#F87171] text-xs rounded-full font-medium">
+                            Atacar
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-[#6B7280] capitalize">{deuda.titular}</span>
                     </div>
-                    <span className="text-xs text-[#6B7280] capitalize">{deuda.titular}</span>
+
+                    {/* CAT */}
+                    <div className="col-span-2 flex items-center justify-center">
+                      <span className={`px-2 py-1 rounded-lg text-sm font-semibold ${
+                        isHighCAT ? 'bg-[#F87171]/20 text-[#F87171]' :
+                        isMediumCAT ? 'bg-[#FBBF24]/20 text-[#FBBF24]' :
+                        'bg-[#6EE7B7]/20 text-[#6EE7B7]'
+                      }`}>
+                        {deuda.cat}%
+                      </span>
+                    </div>
+
+                    {/* Balance */}
+                    <div className="col-span-3 flex items-center justify-end">
+                      <span className="font-semibold text-white">{formatMoney(deuda.saldoActual)}</span>
+                    </div>
+
+                    {/* Minimum Payment */}
+                    <div className="col-span-2 flex items-center justify-end">
+                      <span className="text-[#9CA3AF]">{formatMoney(deuda.pagoMinimo)}</span>
+                    </div>
                   </div>
 
-                  {/* CAT */}
-                  <div className="col-span-2 flex items-center justify-center">
-                    <span className={`px-2 py-1 rounded-lg text-sm font-semibold ${
-                      isHighCAT ? 'bg-[#F87171]/20 text-[#F87171]' :
-                      isMediumCAT ? 'bg-[#FBBF24]/20 text-[#FBBF24]' :
-                      'bg-[#6EE7B7]/20 text-[#6EE7B7]'
-                    }`}>
-                      {deuda.cat}%
-                    </span>
-                  </div>
-
-                  {/* Balance */}
-                  <div className="col-span-3 flex items-center justify-end">
-                    <span className="font-semibold text-white">{formatMoney(deuda.saldoActual)}</span>
-                  </div>
-
-                  {/* Minimum Payment */}
-                  <div className="col-span-2 flex items-center justify-end">
-                    <span className="text-[#9CA3AF]">{formatMoney(deuda.pagoMinimo)}</span>
-                  </div>
+                  {/* Loss Aversion Message - Shows on hover or always for first debt */}
+                  {(isFirst || isHighCAT) && monthlyInterestLoss > 500 && (
+                    <div className={`px-4 pb-3 ${isFirst ? 'block' : 'hidden group-hover:block'}`}>
+                      <div className="flex items-center gap-2 p-2 bg-red-500/10 rounded-lg border border-red-500/20">
+                        <span className="text-red-400 text-xs">
+                          💸 Cada mes sin pagar esto pierdes ~{formatMoney(monthlyInterestLoss)} en intereses
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -772,6 +822,16 @@ export default function Dashboard() {
 
       {/* Presupuestos Personales */}
       <PresupuestosPersonales />
+
+      {/* Future Self Visualization */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          {/* Timeline 2026 will go here */}
+        </div>
+        <div className="lg:col-span-1">
+          <FutureSelfCard />
+        </div>
+      </div>
 
       {/* Timeline 2026 - Enhanced with area chart */}
       <div className="glass-card">

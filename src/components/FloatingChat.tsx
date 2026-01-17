@@ -1,63 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, X, MessageCircle, Minimize2, CheckCircle } from 'lucide-react';
+import { Send, Bot, User, Loader2, X, MessageCircle, Minimize2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
-
-interface Gasto {
-  id: string;
-  fecha: string;
-  descripcion: string;
-  monto: number;
-  categoria: string;
-  titular: string;
-}
-
-const SYSTEM_CONTEXT = `Eres un asistente financiero personal para Alejandra y Ricardo, una pareja en México que está trabajando para salir de deudas.
-
-CONTEXTO FINANCIERO:
-- Ingreso mensual combinado: $109,000 MXN
-- Vales de despensa: $4,800 (para comida)
-- Deuda total inicial: $491,442 MXN
-- Disponible mensual para pagar deuda extra: $38,450 MXN
-- Meta: Libres de deudas de tarjetas para noviembre 2026
-- Presupuesto mensual para gastos variables: $15,000 MXN
-
-DEUDAS (ordenadas por prioridad - método avalancha):
-1. Rappi - $14,403 - CAT 157.3%
-2. Nu (Alejandra) - $6,245 - CAT 156.8%
-3. HEB Afirme - $39,834 - CAT 131.9%
-4. Amex Gold - $91,622 - CAT 82.4%
-5. Amex Platinum (Ricardo) - $870 - CAT 78%
-6. Nu (Ricardo) - $9,917 - CAT 63%
-7. Santander LikeU - $66,138 - CAT 60.5%
-8. Crédito Personal - $91,767 - CAT 38%
-9. BBVA (Ricardo) - $121,586 - CAT 32.5%
-10. Banorte/Invex - $49,060 - CAT 30%
-
-GASTOS FIJOS MENSUALES:
-- Renta: $12,700
-- Carro: $13,000
-- Crédito personal: $6,000
-- Gasolina: $1,500
-- Luz: $1,250
-- Gas: $450
-- Suscripciones: $3,551
-
-REGLAS IMPORTANTES:
-1. Responde en español, de forma breve y directa (máximo 3 párrafos)
-2. Si el usuario quiere registrar un gasto, extrae: monto, descripción, categoría (comida/transporte/entretenimiento/salud/hogar/servicios/otros), y quién gastó (alejandra/ricardo/compartido)
-3. Para registrar un gasto, DEBES responder con el formato EXACTO:
-   [REGISTRAR_GASTO]{"monto":500,"descripcion":"Cine","categoria":"entretenimiento","titular":"compartido"}[/REGISTRAR_GASTO]
-   Seguido de tu confirmación amigable.
-4. Si no está claro algún dato del gasto, pregunta antes de registrar
-5. Si preguntan si pueden gastar algo, evalúa si está dentro del presupuesto de $15,000 para gastos variables
-6. Motívalos pero sé realista
-7. Recuérdales que NO deben usar tarjetas de crédito`;
 
 export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -65,13 +14,13 @@ export default function FloatingChat() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: '¡Hola! Soy tu asistente financiero. Puedo ayudarte a:\n• Registrar gastos (ej: "Gasté $200 en comida")\n• Evaluar si puedes comprar algo\n• Responder dudas sobre el plan\n\n¿En qué te ayudo?',
+      content: '¡Hola! Soy tu asistente financiero.\n\n• "Gasté $200 en comida"\n• "Pagamos la renta $12,700"\n• "Quita el último gasto"\n• "¿Qué he gastado?"\n\n¿En qué te ayudo?',
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
-  const [lastGastoRegistrado, setLastGastoRegistrado] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -85,41 +34,298 @@ export default function FloatingChat() {
     }
   }, [messages, isOpen]);
 
-  // Función para registrar gasto
-  const registrarGasto = (gastoData: Omit<Gasto, 'id' | 'fecha'>) => {
-    const gasto: Gasto = {
-      ...gastoData,
-      id: Date.now().toString(),
-      fecha: new Date().toISOString().split('T')[0],
-    };
-
-    const existingGastos = JSON.parse(localStorage.getItem('finanzas-gastos') || '[]');
-    existingGastos.push(gasto);
-    localStorage.setItem('finanzas-gastos', JSON.stringify(existingGastos));
-
-    setLastGastoRegistrado(gasto.descripcion);
-    setTimeout(() => setLastGastoRegistrado(null), 3000);
-
-    return gasto;
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
   };
 
-  // Procesar respuesta del asistente para detectar gastos
-  const processAssistantResponse = (response: string): string => {
-    const gastoRegex = /\[REGISTRAR_GASTO\](.*?)\[\/REGISTRAR_GASTO\]/;
-    const match = response.match(gastoRegex);
+  // Procesar respuesta y ejecutar acciones
+  const processResponse = async (response: string): Promise<string> => {
+    let cleanResponse = response;
 
-    if (match) {
+    // 1. Procesar GASTO
+    const gastoRegex = /\[GASTO:(\d+(?:\.\d+)?):([^:]+):([^:]+):([^:]+):([^\]]+)\]/;
+    const gastoMatch = response.match(gastoRegex);
+
+    if (gastoMatch) {
+      const [, monto, categoria, descripcion, titular, tipo] = gastoMatch;
+      const esFijo = tipo === 'fijo';
+      const conVales = tipo === 'vales';
+
       try {
-        const gastoData = JSON.parse(match[1]);
-        registrarGasto(gastoData);
-        // Quitar el tag de la respuesta mostrada
-        return response.replace(gastoRegex, '').trim();
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'registrar_gasto',
+            params: { monto: parseFloat(monto), categoria, descripcion, titular, esFijo, conVales }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const icono = esFijo ? '📋 Fijo' : (conVales ? '🏷️ Vales' : '💸 Variable');
+          showNotification(`${icono}: $${monto} - ${descripcion}`, 'success');
+        } else {
+          showNotification(data.error || 'Error al guardar', 'error');
+        }
       } catch (e) {
-        console.error('Error parsing gasto:', e);
+        showNotification('Error de conexión', 'error');
+      }
+      cleanResponse = response.replace(gastoRegex, '').trim();
+    }
+
+    // 2. Procesar BORRAR (ultimo o por descripción)
+    const borrarRegex = /\[BORRAR:([^\]]+)\]/;
+    const borrarMatch = response.match(borrarRegex);
+    if (borrarMatch) {
+      const [, target] = borrarMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: target === 'ultimo' ? 'borrar_ultimo_gasto' : 'borrar_gasto_por_descripcion',
+            params: { descripcion: target }
+          })
+        });
+        const data = await res.json();
+        showNotification(data.success ? (data.message || 'Eliminado') : (data.error || 'No encontrado'), data.success ? 'success' : 'error');
+      } catch (e) {
+        showNotification('Error de conexión', 'error');
+      }
+      cleanResponse = response.replace(borrarRegex, '').trim();
+    }
+
+    // 3. Procesar BORRAR_ID
+    const borrarIdRegex = /\[BORRAR_ID:([^\]]+)\]/;
+    const borrarIdMatch = response.match(borrarIdRegex);
+    if (borrarIdMatch) {
+      const [, gastoId] = borrarIdMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'borrar_gasto', params: { gastoId } })
+        });
+        const data = await res.json();
+        showNotification(data.success ? 'Gasto eliminado' : (data.error || 'Error'), data.success ? 'success' : 'error');
+      } catch (e) {
+        showNotification('Error de conexión', 'error');
+      }
+      cleanResponse = response.replace(borrarIdRegex, '').trim();
+    }
+
+    // 4. Procesar VER_ULTIMOS
+    const verUltimosRegex = /\[VER_ULTIMOS:(\d+)\]/;
+    const verUltimosMatch = response.match(verUltimosRegex);
+    if (verUltimosMatch) {
+      const [, cantidad] = verUltimosMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'ver_ultimos_gastos', params: { cantidad: parseInt(cantidad) } })
+        });
+        const data = await res.json();
+        if (data.success && data.data.length > 0) {
+          const gastosTexto = data.data.map((g: any) => `• $${g.monto} - ${g.descripcion}\n  ID: ${g.id}`).join('\n');
+          cleanResponse = `Últimos ${cantidad} gastos:\n${gastosTexto}`;
+        } else {
+          cleanResponse = 'No hay gastos registrados.';
+        }
+      } catch (e) {
+        cleanResponse = 'Error al obtener gastos.';
       }
     }
 
-    return response;
+    // 5. Procesar LISTAR gastos
+    const listarRegex = /\[LISTAR:gastos\]/;
+    if (response.match(listarRegex)) {
+      try {
+        const res = await fetch('/api/finanzas');
+        const data = await res.json();
+        if (data.success && data.data.gastosMes?.length > 0) {
+          const gastosTexto = data.data.gastosMes.slice(0, 5).map((g: any) => `• $${g.monto} - ${g.descripcion}`).join('\n');
+          cleanResponse = `Gastos del mes:\n${gastosTexto}\n\nTotal: $${data.data.totalGastadoMes?.toLocaleString() || 0}`;
+        } else {
+          cleanResponse = 'No hay gastos este mes.';
+        }
+      } catch (e) {
+        cleanResponse = 'Error al obtener gastos.';
+      }
+    }
+
+    // 6. Procesar RESUMEN
+    const resumenRegex = /\[RESUMEN\]/;
+    if (response.match(resumenRegex)) {
+      try {
+        const res = await fetch('/api/finanzas');
+        const data = await res.json();
+        if (data.success) {
+          const d = data.data;
+          cleanResponse = `📊 Resumen del mes:\n\n💰 Presupuesto: $${d.disponible?.toLocaleString() || 0} de $${d.presupuestoVariable?.toLocaleString()}\n🏷️ Vales: $${d.disponibleVales?.toLocaleString() || 0} de $${d.presupuestoVales?.toLocaleString()}\n📉 Deuda total: $${d.deudaTotal?.toLocaleString() || 0}\n\nGastado este mes: $${d.totalGastadoMes?.toLocaleString() || 0}`;
+        } else {
+          cleanResponse = 'Error obteniendo resumen.';
+        }
+      } catch (e) {
+        cleanResponse = 'Error de conexión.';
+      }
+    }
+
+    // 7. Procesar PRESUPUESTO
+    const presupuestoRegex = /\[PRESUPUESTO\]/;
+    if (response.match(presupuestoRegex)) {
+      try {
+        const res = await fetch('/api/finanzas');
+        const data = await res.json();
+        if (data.success) {
+          const d = data.data;
+          cleanResponse = `💵 Presupuesto disponible:\n\n• Variable: $${d.disponible?.toLocaleString()} de $${d.presupuestoVariable?.toLocaleString()}\n• Vales: $${d.disponibleVales?.toLocaleString()} de $${d.presupuestoVales?.toLocaleString()}\n\nGastos variables: $${d.totalGastosVariables?.toLocaleString() || 0}\nGastos con vales: $${d.totalGastosConVales?.toLocaleString() || 0}`;
+        }
+      } catch (e) {
+        cleanResponse = 'Error de conexión.';
+      }
+    }
+
+    // 8. Procesar DEUDAS
+    const deudasRegex = /\[DEUDAS\]/;
+    if (response.match(deudasRegex)) {
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'listar_deudas', params: {} })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const deudasTexto = data.data.deudas.slice(0, 5).map((d: any, i: number) => `${i + 1}. ${d.nombre}: $${d.saldo.toLocaleString()} (${d.cat}% CAT)`).join('\n');
+          cleanResponse = `📋 Deudas (${data.data.cantidadDeudas} total):\n\n${deudasTexto}\n\n💰 Total: $${data.data.deudaTotal.toLocaleString()}`;
+        }
+      } catch (e) {
+        cleanResponse = 'Error al obtener deudas.';
+      }
+    }
+
+    // 9. Procesar PROYECCION
+    const proyeccionRegex = /\[PROYECCION\]/;
+    if (response.match(proyeccionRegex)) {
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'proyeccion_libertad', params: {} })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const d = data.data;
+          const proximas = d.proximasLiquidaciones.map((p: any) => `• ${p.nombre}: ${p.fechaEstimada}`).join('\n');
+          cleanResponse = `🎯 Proyección de libertad:\n\n📅 Fecha estimada: ${d.fechaLibertad}\n⏱️ Meses restantes: ${d.mesesRestantes}\n💰 Deuda total: $${d.deudaTotal.toLocaleString()}\n\nPróximas liquidaciones:\n${proximas}`;
+        }
+      } catch (e) {
+        cleanResponse = 'Error al calcular proyección.';
+      }
+    }
+
+    // 10. Procesar CATEGORIA
+    const categoriaRegex = /\[CATEGORIA:([^\]]+)\]/;
+    const categoriaMatch = response.match(categoriaRegex);
+    if (categoriaMatch) {
+      const [, categoria] = categoriaMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'gastos_por_categoria', params: { categoria } })
+        });
+        const data = await res.json();
+        if (data.success) {
+          cleanResponse = `📂 Gastos en "${categoria}":\n\nTotal: $${data.data.total.toLocaleString()}\nTransacciones: ${data.data.cantidad}`;
+        }
+      } catch (e) {
+        cleanResponse = 'Error al buscar categoría.';
+      }
+    }
+
+    // 11. Procesar TITULAR
+    const titularRegex = /\[TITULAR:([^\]]+)\]/;
+    const titularMatch = response.match(titularRegex);
+    if (titularMatch) {
+      const [, titular] = titularMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'gastos_por_titular', params: { titular } })
+        });
+        const data = await res.json();
+        if (data.success) {
+          cleanResponse = `👤 Gastos de ${titular}:\n\nTotal: $${data.data.total.toLocaleString()}\nTransacciones: ${data.data.cantidad}`;
+        }
+      } catch (e) {
+        cleanResponse = 'Error al buscar titular.';
+      }
+    }
+
+    // 12. Procesar PAGO_DEUDA
+    const pagoDeudaRegex = /\[PAGO_DEUDA:([^:]+):(\d+)\]/;
+    const pagoDeudaMatch = response.match(pagoDeudaRegex);
+    if (pagoDeudaMatch) {
+      const [, deudaNombre, monto] = pagoDeudaMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'registrar_pago_deuda', params: { deudaNombre, monto: parseInt(monto) } })
+        });
+        const data = await res.json();
+        showNotification(data.success ? data.message : (data.error || 'Error'), data.success ? 'success' : 'error');
+      } catch (e) {
+        showNotification('Error de conexión', 'error');
+      }
+      cleanResponse = response.replace(pagoDeudaRegex, '').trim();
+    }
+
+    // 13. Procesar SIMULAR
+    const simularRegex = /\[SIMULAR:(\d+)\]/;
+    const simularMatch = response.match(simularRegex);
+    if (simularMatch) {
+      const [, montoExtra] = simularMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'simular_pago_extra', params: { montoExtra: parseInt(montoExtra) } })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const d = data.data;
+          cleanResponse = `🧮 Simulación con $${d.montoExtra.toLocaleString()} extra/mes:\n\n📅 Libertad actual: ${d.fechaLibertadSinExtra}\n📅 Nueva fecha: ${d.fechaLibertadConExtra}\n⏱️ Meses ahorrados: ${d.mesesAhorrados}\n💰 Interés ahorrado: ~$${d.interesAhorrado.toLocaleString()}`;
+        }
+      } catch (e) {
+        cleanResponse = 'Error en simulación.';
+      }
+    }
+
+    // 14. Procesar EDITAR_GASTO
+    const editarRegex = /\[EDITAR_GASTO:([^:]+):([^:]+):([^\]]+)\]/;
+    const editarMatch = response.match(editarRegex);
+    if (editarMatch) {
+      const [, gastoId, campo, valor] = editarMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'editar_gasto', params: { gastoId, campo, valor } })
+        });
+        const data = await res.json();
+        showNotification(data.success ? data.message : (data.error || 'Error'), data.success ? 'success' : 'error');
+      } catch (e) {
+        showNotification('Error de conexión', 'error');
+      }
+      cleanResponse = response.replace(editarRegex, '').trim();
+    }
+
+    return cleanResponse || response;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -137,24 +343,20 @@ export default function FloatingChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...messages, { role: 'user', content: userMessage }],
-          systemContext: SYSTEM_CONTEXT,
         }),
       });
 
-      if (!response.ok) throw new Error('Error en la respuesta');
+      if (!response.ok) throw new Error('Error');
 
       const data = await response.json();
-      const processedMessage = processAssistantResponse(data.message);
+      const processedMessage = await processResponse(data.message);
       setMessages((prev) => [...prev, { role: 'assistant', content: processedMessage }]);
       if (!isOpen) setHasUnread(true);
     } catch (error) {
       console.error('Error:', error);
       setMessages((prev) => [
         ...prev,
-        {
-          role: 'assistant',
-          content: 'Lo siento, hubo un error. Intenta de nuevo.',
-        },
+        { role: 'assistant', content: 'Error de conexión. Intenta de nuevo.' },
       ]);
     } finally {
       setIsLoading(false);
@@ -162,26 +364,32 @@ export default function FloatingChat() {
   };
 
   const quickActions = [
-    'Gasté $500 en comida',
-    '¿Puedo gastar $300?',
-    '¿Cómo vamos?',
+    '¿Cuánto me queda?',
+    '¿Cómo van las deudas?',
+    'Ver últimos gastos',
   ];
 
   return (
     <>
-      {/* Notificación de gasto registrado */}
-      {lastGastoRegistrado && (
-        <div className="fixed bottom-24 right-4 lg:right-8 z-50 bg-green-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-pulse">
-          <CheckCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">Gasto registrado: {lastGastoRegistrado}</span>
+      {/* Notificación */}
+      {notification && (
+        <div className={`fixed bottom-24 right-4 lg:right-8 z-50 ${
+          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-pulse`}>
+          {notification.type === 'success' ? (
+            <CheckCircle className="w-5 h-5" />
+          ) : (
+            <AlertCircle className="w-5 h-5" />
+          )}
+          <span className="text-sm font-medium">{notification.message}</span>
         </div>
       )}
 
       {/* Chat Window */}
       {isOpen && (
         <div
-          className={`fixed bottom-24 right-4 lg:right-8 z-50 w-[360px] max-w-[calc(100vw-2rem)] bg-[#1a1a2e] border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden transition-all duration-300 ${
-            isMinimized ? 'h-14' : 'h-[500px]'
+          className={`fixed bottom-24 right-4 lg:right-8 z-50 w-[340px] max-w-[calc(100vw-2rem)] bg-[#1a1a2e] border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden transition-all duration-300 ${
+            isMinimized ? 'h-14' : 'h-[450px]'
           }`}
         >
           {/* Header */}
@@ -217,7 +425,7 @@ export default function FloatingChat() {
           {!isMinimized && (
             <>
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 h-[360px]">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 h-[320px]">
                 {messages.map((message, index) => (
                   <div
                     key={index}
@@ -282,7 +490,7 @@ export default function FloatingChat() {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Escribe o registra un gasto..."
+                    placeholder="Escribe tu mensaje..."
                     className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
                     disabled={isLoading}
                   />
