@@ -22,6 +22,8 @@ import {
   Trash2,
   Check,
   ChevronDown,
+  ChevronUp,
+  Info,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -129,11 +131,24 @@ export default function ProfessionalDashboard() {
   const [editForm, setEditForm] = useState<{ categoria: string; titular: string; monto: string; descripcion: string }>({ categoria: '', titular: '', monto: '', descripcion: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   // Establecer mounted después del primer render para evitar errores de hidratación
   useEffect(() => {
     setMounted(true);
+    // Cargar secciones colapsadas del localStorage
+    const savedCollapsed = localStorage.getItem('dashboard-collapsed-sections');
+    if (savedCollapsed) {
+      setCollapsedSections(JSON.parse(savedCollapsed));
+    }
   }, []);
+
+  // Toggle para colapsar/expandir secciones
+  const toggleSection = (section: string) => {
+    const newCollapsed = { ...collapsedSections, [section]: !collapsedSections[section] };
+    setCollapsedSections(newCollapsed);
+    localStorage.setItem('dashboard-collapsed-sections', JSON.stringify(newCollapsed));
+  };
 
   // Initialize Firebase data if empty, then load charts
   useEffect(() => {
@@ -320,6 +335,28 @@ export default function ProfessionalDashboard() {
   }, [calculations.gastosDelMes]);
 
   // Timeline inicia en febrero 2026 (enero es mes de prueba)
+  // Mapa de meses para determinar el mes actual
+  const mesActualNum = today.getMonth(); // 0-11
+  const añoActual = today.getFullYear();
+  const getMesKey = (mes: string) => {
+    const meses: Record<string, { month: number; year: number }> = {
+      'Feb': { month: 1, year: 2026 },
+      'Mar': { month: 2, year: 2026 },
+      'May': { month: 4, year: 2026 },
+      'Jul': { month: 6, year: 2026 },
+      'Sep': { month: 8, year: 2026 },
+      'Nov': { month: 10, year: 2026 },
+      'Ene 27': { month: 0, year: 2027 },
+    };
+    return meses[mes];
+  };
+
+  const esMesActual = (mes: string) => {
+    const mesData = getMesKey(mes);
+    if (!mesData) return false;
+    return mesData.month === mesActualNum && mesData.year === añoActual;
+  };
+
   const timelineMilestones = [
     { mes: 'Feb', meta: 'Rappi', completado: deudas.find(d => d.nombre === 'Rappi')?.liquidada || false },
     { mes: 'Mar', meta: 'Nu (Ale)', completado: deudas.find(d => d.nombre === 'Nu' && d.titular === 'alejandra')?.liquidada || false },
@@ -617,6 +654,12 @@ export default function ProfessionalDashboard() {
                 <div className="metric-card-title">
                   <div className={`w-2 h-2 rounded-full ${status.dot}`} />
                   <span className={status.text}>Compartido</span>
+                  <div className="group relative ml-1">
+                    <Info className="w-3.5 h-3.5 text-white/40 hover:text-white/70 cursor-help" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[#1a1a2e] border border-white/20 rounded-lg text-xs text-white/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-xl">
+                      Gastos de hogar, super, servicios
+                    </div>
+                  </div>
                 </div>
                 <div className={`badge ${calculations.porcentajePorTitular.compartido <= 70 ? 'badge-success' : calculations.porcentajePorTitular.compartido <= 100 ? 'badge-warning' : 'badge-danger'}`}>
                   {status.label}
@@ -847,7 +890,20 @@ export default function ProfessionalDashboard() {
       )}
 
       {/* ============ ROW 2: CHART CARDS ============ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
+        <button
+          onClick={() => toggleSection('charts')}
+          className="w-full flex items-center justify-between mb-4 px-1 py-2 hover:bg-white/5 rounded-lg transition-colors"
+        >
+          <span className="text-sm font-medium text-white/70">Gráficas</span>
+          {collapsedSections['charts'] ? (
+            <ChevronDown className="w-4 h-4 text-white/50" />
+          ) : (
+            <ChevronUp className="w-4 h-4 text-white/50" />
+          )}
+        </button>
+        {!collapsedSections['charts'] && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Progreso del Mes - Area Chart */}
         <div className="glass-card">
           <div className="card-header">
@@ -943,10 +999,25 @@ export default function ProfessionalDashboard() {
             </div>
           </div>
         </div>
+          </div>
+        )}
       </div>
 
       {/* ============ ROW 3: DATA TABLES ============ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
+        <button
+          onClick={() => toggleSection('tables')}
+          className="w-full flex items-center justify-between mb-4 px-1 py-2 hover:bg-white/5 rounded-lg transition-colors"
+        >
+          <span className="text-sm font-medium text-white/70">Deudas y Gastos</span>
+          {collapsedSections['tables'] ? (
+            <ChevronDown className="w-4 h-4 text-white/50" />
+          ) : (
+            <ChevronUp className="w-4 h-4 text-white/50" />
+          )}
+        </button>
+        {!collapsedSections['tables'] && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Deudas por Prioridad */}
         <div className="glass-card">
           <div className="card-header">
@@ -1021,15 +1092,45 @@ export default function ProfessionalDashboard() {
             </div>
           )}
         </div>
+          </div>
+        )}
       </div>
 
       {/* ============ ROW 4: PAYMENT REMINDERS & PWA ============ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PaymentReminders />
-        <PWAWidget />
+      <div>
+        <button
+          onClick={() => toggleSection('reminders')}
+          className="w-full flex items-center justify-between mb-4 px-1 py-2 hover:bg-white/5 rounded-lg transition-colors"
+        >
+          <span className="text-sm font-medium text-white/70">Recordatorios y Herramientas</span>
+          {collapsedSections['reminders'] ? (
+            <ChevronDown className="w-4 h-4 text-white/50" />
+          ) : (
+            <ChevronUp className="w-4 h-4 text-white/50" />
+          )}
+        </button>
+        {!collapsedSections['reminders'] && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PaymentReminders />
+            <PWAWidget />
+          </div>
+        )}
       </div>
 
       {/* ============ ROW 5: TIMELINE 2026 ============ */}
+      <div>
+        <button
+          onClick={() => toggleSection('timeline')}
+          className="w-full flex items-center justify-between mb-4 px-1 py-2 hover:bg-white/5 rounded-lg transition-colors"
+        >
+          <span className="text-sm font-medium text-white/70">Plan hacia la Libertad</span>
+          {collapsedSections['timeline'] ? (
+            <ChevronDown className="w-4 h-4 text-white/50" />
+          ) : (
+            <ChevronUp className="w-4 h-4 text-white/50" />
+          )}
+        </button>
+        {!collapsedSections['timeline'] && (
       <div className="glass-card">
         <div className="card-header">
           <div className="card-header-title">
@@ -1043,24 +1144,34 @@ export default function ProfessionalDashboard() {
             <div className="h-full bg-gradient-to-r from-purple-500 to-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${deudaCalculations.porcentajePagado}%` }} />
           </div>
           <div className="relative flex justify-between">
-            {timelineMilestones.map((milestone, index) => (
-              <div key={index} className="flex flex-col items-center">
+            {timelineMilestones.map((milestone, index) => {
+              const esHoy = esMesActual(milestone.mes);
+              return (
+              <div key={index} className="flex flex-col items-center relative">
+                {esHoy && (
+                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-amber-500 text-[10px] font-bold text-white rounded-full whitespace-nowrap">
+                    HOY
+                  </div>
+                )}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 transition-all ${
                   milestone.completado ? 'bg-emerald-500 text-white' :
+                  esHoy ? 'bg-amber-500 text-white ring-2 ring-amber-400 ring-offset-2 ring-offset-[#1a1a2e]' :
                   index === timelineMilestones.findIndex(m => !m.completado) ? 'bg-purple-500 text-white animate-pulse' :
                   'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
                 }`}>
                   {milestone.completado ? <CheckCircle2 className="w-4 h-4" /> : index === timelineMilestones.length - 1 ? <Target className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                 </div>
-                <span className={`mt-2 text-xs font-medium ${milestone.completado ? 'text-emerald-400' : 'text-[var(--text-tertiary)]'}`}>{milestone.mes}</span>
-                <span className={`text-xs ${milestone.completado ? 'text-[var(--text-secondary)]' : 'text-[var(--text-tertiary)]'}`}>{milestone.meta}</span>
+                <span className={`mt-2 text-xs font-medium ${esHoy ? 'text-amber-400' : milestone.completado ? 'text-emerald-400' : 'text-[var(--text-tertiary)]'}`}>{milestone.mes}</span>
+                <span className={`text-xs ${esHoy ? 'text-amber-300' : milestone.completado ? 'text-[var(--text-secondary)]' : 'text-[var(--text-tertiary)]'}`}>{milestone.meta}</span>
               </div>
-            ))}
+            )})}
           </div>
         </div>
         <div className="mt-8 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl text-center">
           <p className="text-purple-300">Cada peso que no gastas hoy te acerca a la libertad financiera</p>
         </div>
+      </div>
+        )}
       </div>
     </div>
   );
