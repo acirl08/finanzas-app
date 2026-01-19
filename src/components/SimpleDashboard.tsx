@@ -86,11 +86,14 @@ export default function SimpleDashboard() {
   // Get current month gastos
   const mesActual = today.toISOString().slice(0, 7);
   const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
-  const totalGastadoMes = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
 
-  // Get today's gastos
+  // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
+  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+  const totalGastadoMes = gastosVariablesDelMes.reduce((sum, g) => sum + g.monto, 0);
+
+  // Get today's gastos (solo variables)
   const hoy = today.toISOString().split('T')[0];
-  const gastosHoy = gastos.filter(g => g.fecha === hoy);
+  const gastosHoy = gastos.filter(g => g.fecha === hoy && !g.esFijo && !g.conVales);
   const totalGastadoHoy = gastosHoy.reduce((sum, g) => sum + g.monto, 0);
 
   // Calculate remaining budget and daily allowance
@@ -114,7 +117,8 @@ export default function SimpleDashboard() {
   });
 
   const diasBajoPresupuesto = diasDelMes.filter(dia => {
-    const gastosDia = gastos.filter(g => g.fecha === dia);
+    // Solo contar gastos variables para la racha
+    const gastosDia = gastos.filter(g => g.fecha === dia && !g.esFijo && !g.conVales);
     const totalDia = gastosDia.reduce((sum, g) => sum + g.monto, 0);
     return totalDia <= presupuestoDiario;
   }).length;
@@ -272,8 +276,8 @@ export default function SimpleDashboard() {
                 <p className="text-lg font-bold text-white">{daysRemaining}</p>
               </div>
               <div className="p-3 bg-white/5 rounded-xl">
-                <p className="text-xs text-white/40 mb-1">Transacciones</p>
-                <p className="text-lg font-bold text-white">{gastosDelMes.length}</p>
+                <p className="text-xs text-white/40 mb-1">Gastos variables</p>
+                <p className="text-lg font-bold text-white">{gastosVariablesDelMes.length}</p>
               </div>
             </div>
           </div>

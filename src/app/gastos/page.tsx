@@ -71,12 +71,15 @@ export default function GastosPage() {
   const mesActual = today.toISOString().slice(0, 7);
   const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-  const gastosFiltrados = gastosDelMes
+  // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
+  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+
+  const gastosFiltrados = gastosVariablesDelMes
     .filter(g => filtro === 'todos' || g.titular === filtro)
     .filter(g => g.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
-  const totalMes = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
+  const totalMes = gastosVariablesDelMes.reduce((sum, g) => sum + g.monto, 0);
   const restante = PRESUPUESTO_VARIABLE - totalMes;
 
   if (loading) {
@@ -179,8 +182,8 @@ export default function GastosPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/50 text-sm">Transacciones</p>
-              <p className="text-2xl font-bold text-white mt-1">{gastosDelMes.length}</p>
-              <p className="text-xs text-white/40 mt-1">Este mes</p>
+              <p className="text-2xl font-bold text-white mt-1">{gastosVariablesDelMes.length}</p>
+              <p className="text-xs text-white/40 mt-1">Gastos variables</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
               <Receipt className="w-6 h-6 text-blue-400" />
@@ -204,7 +207,7 @@ export default function GastosPage() {
         </div>
       </div>
 
-      {gastosDelMes.length > 0 ? (
+      {gastosVariablesDelMes.length > 0 ? (
         <>
           {/* Search and Filters */}
           <div className="glass-card">

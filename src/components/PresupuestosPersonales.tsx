@@ -32,11 +32,14 @@ export default function PresupuestosPersonales() {
   const mesActual = new Date().toISOString().slice(0, 7); // "2026-01"
   const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-  // Calcular gastos por titular
+  // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
+  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+
+  // Calcular gastos por titular (solo variables)
   const gastosPorTitular = {
-    alejandra: gastosDelMes.filter(g => g.titular === 'alejandra').reduce((sum, g) => sum + g.monto, 0),
-    ricardo: gastosDelMes.filter(g => g.titular === 'ricardo').reduce((sum, g) => sum + g.monto, 0),
-    compartido: gastosDelMes.filter(g => g.titular === 'compartido').reduce((sum, g) => sum + g.monto, 0),
+    alejandra: gastosVariablesDelMes.filter(g => g.titular === 'alejandra').reduce((sum, g) => sum + g.monto, 0),
+    ricardo: gastosVariablesDelMes.filter(g => g.titular === 'ricardo').reduce((sum, g) => sum + g.monto, 0),
+    compartido: gastosVariablesDelMes.filter(g => g.titular === 'compartido').reduce((sum, g) => sum + g.monto, 0),
   };
 
   const presupuestos = [
