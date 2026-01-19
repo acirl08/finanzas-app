@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   ArrowDownRight,
+  ArrowRight,
   X,
   ShoppingCart,
   Coffee,
@@ -558,7 +559,7 @@ export default function ProfessionalDashboard() {
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-[var(--text-tertiary)]">
                   <span>{Math.round(calculations.porcentajePorTitular.alejandra)}% usado</span>
-                  <span>Ver desglose →</span>
+                  <span className="flex items-center gap-1">Ver desglose <ArrowRight className="w-3 h-3" /></span>
                 </div>
               </div>
             </button>
@@ -597,7 +598,7 @@ export default function ProfessionalDashboard() {
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-[var(--text-tertiary)]">
                   <span>{Math.round(calculations.porcentajePorTitular.ricardo)}% usado</span>
-                  <span>Ver desglose →</span>
+                  <span className="flex items-center gap-1">Ver desglose <ArrowRight className="w-3 h-3" /></span>
                 </div>
               </div>
             </button>
@@ -636,7 +637,7 @@ export default function ProfessionalDashboard() {
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-[var(--text-tertiary)]">
                   <span>{Math.round(calculations.porcentajePorTitular.compartido)}% usado</span>
-                  <span>Ver desglose →</span>
+                  <span className="flex items-center gap-1">Ver desglose <ArrowRight className="w-3 h-3" /></span>
                 </div>
               </div>
             </button>
@@ -646,8 +647,8 @@ export default function ProfessionalDashboard() {
 
       {/* ============ MODAL: DESGLOSE DE GASTOS ============ */}
       {selectedTitular && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedTitular(null)}>
-          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4" onClick={() => setSelectedTitular(null)}>
+          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] sm:max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <div>
@@ -667,7 +668,7 @@ export default function ProfessionalDashboard() {
             </div>
 
             {/* Content */}
-            <div className="p-4 overflow-y-auto max-h-[60vh]">
+            <div className="p-4 overflow-y-auto flex-1">
               {/* Por categoría */}
               {calculations.gastosPorCategoriaPorTitular[selectedTitular].length > 0 ? (
                 <>
@@ -693,101 +694,30 @@ export default function ProfessionalDashboard() {
                   <h4 className="text-sm font-medium text-white/70 mb-3">Detalle de gastos</h4>
                   <div className="space-y-2">
                     {calculations.gastosListaPorTitular[selectedTitular].map((gasto, idx) => (
-                      <div key={gasto.id || idx}>
-                        {editingGasto?.id === gasto.id ? (
-                          // Formulario de edición inline
-                          <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl space-y-3">
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={editForm.descripcion}
-                                onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
-                                placeholder="Descripción"
-                                className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-500"
-                              />
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-sm">$</span>
-                                <input
-                                  type="number"
-                                  value={editForm.monto}
-                                  onChange={(e) => setEditForm({ ...editForm, monto: e.target.value })}
-                                  className="w-24 bg-white/10 border border-white/20 rounded-lg pl-7 pr-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
-                                />
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <div className="relative flex-1">
-                                <select
-                                  value={editForm.categoria}
-                                  onChange={(e) => setEditForm({ ...editForm, categoria: e.target.value })}
-                                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 appearance-none cursor-pointer"
-                                >
-                                  {categorias.map((cat) => (
-                                    <option key={cat} value={cat} className="bg-[#1a1a2e] text-white">
-                                      {categoriaLabels[cat] || cat}
-                                    </option>
-                                  ))}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
-                              </div>
-                              <div className="relative flex-1">
-                                <select
-                                  value={editForm.titular}
-                                  onChange={(e) => setEditForm({ ...editForm, titular: e.target.value })}
-                                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 appearance-none cursor-pointer"
-                                >
-                                  <option value="alejandra" className="bg-[#1a1a2e] text-white">Alejandra</option>
-                                  <option value="ricardo" className="bg-[#1a1a2e] text-white">Ricardo</option>
-                                  <option value="compartido" className="bg-[#1a1a2e] text-white">Compartido</option>
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
-                              </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <button
-                                onClick={cancelEdit}
-                                className="px-3 py-1.5 text-sm text-white/70 hover:bg-white/10 rounded-lg transition-colors"
-                              >
-                                Cancelar
-                              </button>
-                              <button
-                                onClick={saveEdit}
-                                disabled={savingEdit}
-                                className="px-3 py-1.5 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50"
-                              >
-                                <Check className="w-4 h-4" />
-                                {savingEdit ? 'Guardando...' : 'Guardar'}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          // Vista normal del gasto
-                          <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-white truncate">{gasto.descripcion || categoriaLabels[gasto.categoria] || gasto.categoria}</p>
-                              <p className="text-xs text-white/50">
-                                {new Date(gasto.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} • {categoriaLabels[gasto.categoria] || gasto.categoria}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1 ml-2">
-                              <span className="text-sm font-medium text-white mr-1">{formatMoney(gasto.monto)}</span>
-                              <button
-                                onClick={() => startEditGasto(gasto)}
-                                className="p-2 hover:bg-purple-500/20 rounded-lg transition-colors"
-                                title="Editar"
-                              >
-                                <Pencil className="w-4 h-4 text-purple-400" />
-                              </button>
-                              <button
-                                onClick={() => gasto.id && handleDeleteGasto(gasto.id)}
-                                className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
-                                title="Borrar"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-400" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                      <div key={gasto.id || idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{gasto.descripcion || categoriaLabels[gasto.categoria] || gasto.categoria}</p>
+                          <p className="text-xs text-white/50">
+                            {new Date(gasto.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} • {categoriaLabels[gasto.categoria] || gasto.categoria}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          <span className="text-sm font-medium text-white mr-1">{formatMoney(gasto.monto)}</span>
+                          <button
+                            onClick={() => startEditGasto(gasto)}
+                            className="p-2 hover:bg-purple-500/20 rounded-lg transition-colors"
+                            title="Editar"
+                          >
+                            <Pencil className="w-4 h-4 text-purple-400" />
+                          </button>
+                          <button
+                            onClick={() => gasto.id && handleDeleteGasto(gasto.id)}
+                            className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                            title="Borrar"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-400" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -815,6 +745,101 @@ export default function ProfessionalDashboard() {
                 className="px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg text-white text-sm font-medium transition-colors"
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ MODAL: EDITAR GASTO ============ */}
+      {editingGasto && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-2 sm:p-4" onClick={cancelEdit}>
+          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-md p-4 sm:p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Editar Gasto</h3>
+              <button onClick={cancelEdit} className="p-1.5 hover:bg-white/10 rounded-lg">
+                <X className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Descripción */}
+              <div>
+                <label className="text-sm text-white/50 block mb-1">Descripción</label>
+                <input
+                  type="text"
+                  value={editForm.descripcion}
+                  onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
+                  placeholder="Descripción del gasto"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2.5 text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              {/* Monto */}
+              <div>
+                <label className="text-sm text-white/50 block mb-1">Monto</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">$</span>
+                  <input
+                    type="number"
+                    value={editForm.monto}
+                    onChange={(e) => setEditForm({ ...editForm, monto: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg pl-8 pr-3 py-2.5 text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Categoría */}
+              <div>
+                <label className="text-sm text-white/50 block mb-1">Categoría</label>
+                <div className="relative">
+                  <select
+                    value={editForm.categoria}
+                    onChange={(e) => setEditForm({ ...editForm, categoria: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-purple-500 appearance-none cursor-pointer"
+                  >
+                    {categorias.map((cat) => (
+                      <option key={cat} value={cat} className="bg-[#1a1a2e] text-white">
+                        {categoriaLabels[cat] || cat}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Titular */}
+              <div>
+                <label className="text-sm text-white/50 block mb-1">Titular</label>
+                <div className="relative">
+                  <select
+                    value={editForm.titular}
+                    onChange={(e) => setEditForm({ ...editForm, titular: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-purple-500 appearance-none cursor-pointer"
+                  >
+                    <option value="alejandra" className="bg-[#1a1a2e] text-white">Alejandra</option>
+                    <option value="ricardo" className="bg-[#1a1a2e] text-white">Ricardo</option>
+                    <option value="compartido" className="bg-[#1a1a2e] text-white">Compartido</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={cancelEdit}
+                className="flex-1 py-2.5 text-white/70 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={savingEdit}
+                className="flex-1 py-2.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                {savingEdit ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
           </div>
@@ -874,12 +899,12 @@ export default function ProfessionalDashboard() {
             </div>
             <span className="text-sm text-[var(--text-tertiary)]">Por categoría</span>
           </div>
-          <div className="flex items-center">
-            <div className="w-1/2 h-64 relative">
+          <div className="flex flex-col sm:flex-row items-center">
+            <div className="w-full sm:w-1/2 h-48 sm:h-64 relative">
               {chartsReady && !loadingGastos && distribucionData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={distribucionData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3} dataKey="value">
+                    <Pie data={distribucionData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
                       {distribucionData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
@@ -905,14 +930,14 @@ export default function ProfessionalDashboard() {
                 </div>
               )}
             </div>
-            <div className="w-1/2 space-y-3 pl-4">
+            <div className="w-full sm:w-1/2 space-y-2 sm:space-y-3 pt-4 sm:pt-0 sm:pl-4">
               {distribucionData.map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-sm text-[var(--text-secondary)]">{item.name}</span>
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="text-sm text-[var(--text-secondary)] truncate">{item.name}</span>
                   </div>
-                  <span className="text-sm font-medium text-white">{formatMoney(item.value)}</span>
+                  <span className="text-sm font-medium text-white flex-shrink-0">{formatMoney(item.value)}</span>
                 </div>
               ))}
             </div>

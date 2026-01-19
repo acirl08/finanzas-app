@@ -241,8 +241,8 @@ export default function PaymentReminders() {
 
       {/* Modal para registrar pago */}
       {pagoForm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setPagoForm(null)}>
-          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4" onClick={() => setPagoForm(null)}>
+          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-sm p-4 sm:p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white">Registrar Pago</h3>
               <button onClick={() => setPagoForm(null)} className="p-1.5 hover:bg-white/10 rounded-lg">
