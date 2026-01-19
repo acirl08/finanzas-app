@@ -31,12 +31,15 @@ export default function RegistrarPage() {
   const today = new Date();
   const mesActual = today.toISOString().slice(0, 7);
   const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
-  const totalGastado = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
-  const restante = PRESUPUESTO_VARIABLE - totalGastado;
-  const porcentaje = Math.min((totalGastado / PRESUPUESTO_VARIABLE) * 100, 100);
 
-  // Calcular gastos por categoría
-  const gastosPorCategoria = gastosDelMes.reduce((acc, g) => {
+  // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
+  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+  const totalGastadoVariables = gastosVariablesDelMes.reduce((sum, g) => sum + g.monto, 0);
+  const restante = PRESUPUESTO_VARIABLE - totalGastadoVariables;
+  const porcentaje = Math.min((totalGastadoVariables / PRESUPUESTO_VARIABLE) * 100, 100);
+
+  // Calcular gastos por categoría (solo variables para consistencia)
+  const gastosPorCategoria = gastosVariablesDelMes.reduce((acc, g) => {
     acc[g.categoria] = (acc[g.categoria] || 0) + g.monto;
     return acc;
   }, {} as Record<string, number>);
@@ -83,7 +86,7 @@ export default function RegistrarPage() {
     },
     {
       text: "Cada peso que no gastas hoy es un peso más para salir de deudas.",
-      stat: totalGastado > 0 ? `Este mes has gastado ${formatMoney(totalGastado)}` : null,
+      stat: totalGastadoVariables > 0 ? `Este mes has gastado ${formatMoney(totalGastadoVariables)} en variables` : null,
     },
     {
       text: "Usa efectivo para gastos variables. Es más fácil controlar lo que ves.",
@@ -142,7 +145,7 @@ export default function RegistrarPage() {
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-white/50">Gastos variables</span>
                   <span className="text-white">
-                    {loading ? '...' : `${formatMoney(totalGastado)} / ${formatMoney(PRESUPUESTO_VARIABLE)}`}
+                    {loading ? '...' : `${formatMoney(totalGastadoVariables)} / ${formatMoney(PRESUPUESTO_VARIABLE)}`}
                   </span>
                 </div>
                 <div className="progress-bar-bg">
@@ -181,7 +184,7 @@ export default function RegistrarPage() {
             ) : categoriasOrdenadas.length > 0 ? (
               <div className="space-y-3">
                 {categoriasOrdenadas.map(([categoria, amount]) => {
-                  const percent = totalGastado > 0 ? (amount / totalGastado) * 100 : 0;
+                  const percent = totalGastadoVariables > 0 ? (amount / totalGastadoVariables) * 100 : 0;
                   return (
                     <div key={categoria} className="flex items-center gap-3">
                       <div className={`w-2 h-8 rounded-full ${categoryColors[categoria] || 'bg-gray-500'}`} />
