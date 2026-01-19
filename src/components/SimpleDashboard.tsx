@@ -81,7 +81,8 @@ export default function SimpleDashboard() {
   const today = new Date();
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   const dayOfMonth = today.getDate();
-  const daysRemaining = daysInMonth - dayOfMonth + 1;
+  // Ensure at least 1 day remaining to avoid division by zero
+  const daysRemaining = Math.max(1, daysInMonth - dayOfMonth + 1);
 
   // Get current month gastos
   const mesActual = today.toISOString().slice(0, 7);

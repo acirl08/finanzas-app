@@ -45,7 +45,8 @@ export default function BudgetAlertBanner({ onDismiss }: BudgetAlertBannerProps)
 
   // Days remaining
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const daysRemaining = daysInMonth - today.getDate();
+  // Ensure at least 1 day remaining to avoid division by zero
+  const daysRemaining = Math.max(1, daysInMonth - today.getDate());
 
   // Determine alert level
   const getAlertLevel = () => {

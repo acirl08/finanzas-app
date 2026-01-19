@@ -12,7 +12,8 @@ import {
   orderBy,
   onSnapshot,
   Timestamp,
-  writeBatch
+  writeBatch,
+  runTransaction
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Deuda, GastoFijo, Suscripcion } from '@/types';
@@ -94,24 +95,29 @@ export async function updateDeuda(id: string, data: Partial<Deuda>) {
 }
 
 export async function registrarPagoDeuda(deudaId: string, monto: number, nota?: string) {
-  // Get current debt
   const deudaRef = doc(db, DEUDAS_COLLECTION, deudaId);
-  const deudaSnap = await getDoc(deudaRef);
 
-  if (!deudaSnap.exists()) {
-    throw new Error('Deuda no encontrada');
-  }
+  // Use transaction to ensure atomic read-modify-write
+  const nuevoSaldo = await runTransaction(db, async (transaction) => {
+    const deudaSnap = await transaction.get(deudaRef);
 
-  const deuda = deudaSnap.data() as Deuda;
-  const nuevoSaldo = Math.max(0, deuda.saldoActual - monto);
+    if (!deudaSnap.exists()) {
+      throw new Error('Deuda no encontrada');
+    }
 
-  // Update debt balance
-  await updateDoc(deudaRef, {
-    saldoActual: nuevoSaldo,
-    liquidada: nuevoSaldo === 0
+    const deuda = deudaSnap.data() as Deuda;
+    const saldoActualizado = Math.max(0, deuda.saldoActual - monto);
+
+    // Update debt balance atomically
+    transaction.update(deudaRef, {
+      saldoActual: saldoActualizado,
+      liquidada: saldoActualizado === 0
+    });
+
+    return saldoActualizado;
   });
 
-  // Record payment
+  // Record payment (outside transaction - this is just a log entry)
   await addDoc(collection(db, PAGOS_COLLECTION), {
     deudaId,
     monto,

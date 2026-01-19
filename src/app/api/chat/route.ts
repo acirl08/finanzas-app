@@ -63,34 +63,74 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
-        max_tokens: 300,
-        system: SYSTEM_CONTEXT,
-        messages: claudeMessages,
-      }),
-    });
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Claude API error:', response.status, errorData);
-      return NextResponse.json({ error: 'Error de API' }, { status: response.status });
+    let response: Response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 300,
+          system: SYSTEM_CONTEXT,
+          messages: claudeMessages,
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error('Claude API timeout after 30s');
+        return NextResponse.json({
+          message: 'Lo siento, tardé mucho en responder. Intenta de nuevo.'
+        });
+      }
+      console.error('Network error calling Claude API:', fetchError.message);
+      return NextResponse.json({
+        message: 'Error de conexión. Verifica tu internet e intenta de nuevo.'
+      });
+    } finally {
+      clearTimeout(timeoutId);
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      let errorMessage = 'Error del servicio';
+      try {
+        const errorData = await response.text();
+        console.error('Claude API error:', response.status, errorData);
+        // Map common HTTP errors to user-friendly messages
+        if (response.status === 401) errorMessage = 'Error de autenticación';
+        else if (response.status === 429) errorMessage = 'Demasiadas solicitudes, espera un momento';
+        else if (response.status >= 500) errorMessage = 'El servicio está temporalmente no disponible';
+      } catch {
+        console.error('Could not read error response');
+      }
+      return NextResponse.json({ message: errorMessage });
+    }
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      console.error('Could not parse Claude API response as JSON');
+      return NextResponse.json({ message: 'Respuesta inválida del servicio' });
+    }
+
     const textBlock = data.content?.find((block: any) => block.type === 'text');
     const assistantMessage = textBlock?.text || 'Entendido.';
 
     return NextResponse.json({ message: assistantMessage });
   } catch (error: any) {
-    console.error('Error:', error?.message || error);
-    return NextResponse.json({ error: 'Error procesando' }, { status: 500 });
+    console.error('Unexpected error in chat API:', error?.message || error);
+    return NextResponse.json({
+      message: 'Ocurrió un error inesperado. Intenta de nuevo.'
+    });
   }
 }

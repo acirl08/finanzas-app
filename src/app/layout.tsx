@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import FloatingChat from '@/components/FloatingChat';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -41,7 +42,9 @@ export default function RootLayout({
         <div className="min-h-screen bg-[#0f0f1a]">
           <Navbar />
           <main className="pt-20 lg:pt-24 pb-24 lg:pb-8 px-4 lg:px-8 max-w-[1600px] mx-auto">
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </main>
           <FloatingChat />
           <Toaster
