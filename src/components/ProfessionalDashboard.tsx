@@ -318,14 +318,15 @@ export default function ProfessionalDashboard() {
       .slice(0, 5);
   }, [calculations.gastosDelMes]);
 
+  // Timeline inicia en febrero 2026 (enero es mes de prueba)
   const timelineMilestones = [
-    { mes: 'Ene', meta: 'Rappi', completado: deudas.find(d => d.nombre === 'Rappi')?.liquidada || false },
-    { mes: 'Feb', meta: 'Nu (Ale)', completado: deudas.find(d => d.nombre === 'Nu' && d.titular === 'alejandra')?.liquidada || false },
-    { mes: 'Abr', meta: 'HEB', completado: deudas.find(d => d.nombre === 'HEB Afirme')?.liquidada || false },
-    { mes: 'Jun', meta: 'Amex Gold', completado: deudas.find(d => d.nombre === 'Amex Gold')?.liquidada || false },
-    { mes: 'Ago', meta: 'Santander', completado: deudas.find(d => d.nombre === 'Santander LikeU')?.liquidada || false },
-    { mes: 'Oct', meta: 'Crédito', completado: deudas.find(d => d.nombre === 'Crédito Personal')?.liquidada || false },
-    { mes: 'Dic', meta: 'LIBERTAD', completado: deudaCalculations.totalesDeuda.deudaTotal === 0 },
+    { mes: 'Feb', meta: 'Rappi', completado: deudas.find(d => d.nombre === 'Rappi')?.liquidada || false },
+    { mes: 'Mar', meta: 'Nu (Ale)', completado: deudas.find(d => d.nombre === 'Nu' && d.titular === 'alejandra')?.liquidada || false },
+    { mes: 'May', meta: 'HEB', completado: deudas.find(d => d.nombre === 'HEB Afirme')?.liquidada || false },
+    { mes: 'Jul', meta: 'Amex Gold', completado: deudas.find(d => d.nombre === 'Amex Gold')?.liquidada || false },
+    { mes: 'Sep', meta: 'Santander', completado: deudas.find(d => d.nombre === 'Santander LikeU')?.liquidada || false },
+    { mes: 'Nov', meta: 'Crédito', completado: deudas.find(d => d.nombre === 'Crédito Personal')?.liquidada || false },
+    { mes: 'Ene 27', meta: 'LIBERTAD', completado: deudaCalculations.totalesDeuda.deudaTotal === 0 },
   ];
 
   // Sparkline data
@@ -1008,7 +1009,7 @@ export default function ProfessionalDashboard() {
         <div className="card-header">
           <div className="card-header-title">
             <div className="dot bg-purple-500" />
-            <span>Camino a la Libertad 2026</span>
+            <span>Camino a la Libertad (Feb 2026 - Ene 2027)</span>
           </div>
           <div className="badge badge-purple">{deudaCalculations.porcentajePagado.toFixed(1)}% completado</div>
         </div>
