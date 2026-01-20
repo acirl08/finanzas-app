@@ -24,8 +24,8 @@ export default function PresupuestosPersonales() {
   const mesActual = new Date().toISOString().slice(0, 7); // "2026-01"
   const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-  // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
-  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+  // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
+  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
 
   // Calcular gastos por titular (solo variables)
   const gastosPorTitular = {

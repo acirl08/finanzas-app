@@ -581,24 +581,22 @@ export default function FloatingChat() {
             setIsOpen(!isOpen);
             setIsMinimized(false);
           }}
-          className={`relative w-16 h-16 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-105 ${
+          className={`relative w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-105 ${
             isOpen
               ? 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-black/20'
-              : 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-purple-500/40 animate-pulse hover:animate-none'
+              : 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-purple-500/30'
           }`}
         >
           {isOpen ? (
-            <X className="w-7 h-7 text-white" />
+            <X className="w-6 h-6 text-white" />
           ) : (
             <>
-              <MessageCircle className="w-7 h-7 text-white" />
+              <MessageCircle className="w-6 h-6 text-white" />
               {hasUnread && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border-2 border-[#0A0F1C]">
                   1
                 </span>
               )}
-              {/* Pulse ring effect */}
-              <span className="absolute inset-0 rounded-full bg-purple-500 animate-ping opacity-25" />
             </>
           )}
         </button>
