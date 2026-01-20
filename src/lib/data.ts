@@ -151,7 +151,10 @@ export const PRESUPUESTO_ESENCIALES = 8000;
 // GUSTOS ($7,000) - Dividido entre los dos + compartido
 export const PRESUPUESTO_GUSTOS = 7000;
 
-// Total variable = $15,000 (esenciales + gustos, sin contar vales)
+// FONDO DE IMPREVISTOS ($3,000) - Separado del presupuesto variable
+export const PRESUPUESTO_IMPREVISTOS = 3000;
+
+// Total variable = $15,000 (esenciales + gustos, sin contar vales ni imprevistos)
 export const PRESUPUESTO_VARIABLE = PRESUPUESTO_ESENCIALES + PRESUPUESTO_GUSTOS;
 
 // Distribución del presupuesto variable ($15,000)

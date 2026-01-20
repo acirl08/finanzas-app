@@ -54,8 +54,8 @@ export default function DailyBudgetCard() {
     const mesActual = today.toISOString().slice(0, 7);
     const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-    // Gastos variables (no fijos, no vales)
-    const gastosVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+    // Gastos variables (no fijos, no vales, no imprevistos)
+    const gastosVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
     const totalGastadoMes = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
 
     // Gastos con vales

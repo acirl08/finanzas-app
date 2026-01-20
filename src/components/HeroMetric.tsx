@@ -24,9 +24,9 @@ export default function HeroMetric() {
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const dayOfMonth = today.getDate();
 
-    // Filtrar gastos variables del mes (no fijos, no vales)
+    // Filtrar gastos variables del mes (no fijos, no vales, no imprevistos)
     const gastosDelMes = gastos.filter(g =>
-      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales
+      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
     );
     const totalGastado = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
     const disponible = PRESUPUESTO_VARIABLE - totalGastado;

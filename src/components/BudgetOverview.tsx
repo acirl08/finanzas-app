@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Wallet, Sparkles, TrendingDown, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ShoppingCart, Wallet, Sparkles, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import {
   PRESUPUESTO_DESPENSA,
   PRESUPUESTO_ESENCIALES,
   PRESUPUESTO_GUSTOS,
+  PRESUPUESTO_IMPREVISTOS,
   presupuestosPersonales,
   categoriasVales,
   categoriasEsenciales,
@@ -139,8 +140,14 @@ export default function BudgetOverview() {
     .filter(g => categoriasVales.includes(g.categoria))
     .reduce((sum, g) => sum + g.monto, 0);
 
+  // Esenciales SIN imprevistos (los imprevistos van aparte)
   const gastosEsenciales = gastosDelMes
-    .filter(g => categoriasEsenciales.includes(g.categoria))
+    .filter(g => categoriasEsenciales.includes(g.categoria) && g.categoria !== 'imprevistos')
+    .reduce((sum, g) => sum + g.monto, 0);
+
+  // Imprevistos - fondo separado
+  const gastosImprevistos = gastosDelMes
+    .filter(g => g.categoria === 'imprevistos')
     .reduce((sum, g) => sum + g.monto, 0);
 
   const gastosGustos = gastosDelMes
@@ -153,11 +160,21 @@ export default function BudgetOverview() {
     gastado: gastosDelMes.filter(g => g.categoria === cat).reduce((sum, g) => sum + g.monto, 0),
   })).filter(d => d.gastado > 0);
 
-  // Detalles de esenciales por categoría
-  const detallesEsenciales = categoriasEsenciales.map(cat => ({
-    label: categoriaLabels[cat] || cat,
-    gastado: gastosDelMes.filter(g => g.categoria === cat).reduce((sum, g) => sum + g.monto, 0),
-  })).filter(d => d.gastado > 0);
+  // Detalles de esenciales por categoría (sin imprevistos)
+  const detallesEsenciales = categoriasEsenciales
+    .filter(cat => cat !== 'imprevistos')
+    .map(cat => ({
+      label: categoriaLabels[cat] || cat,
+      gastado: gastosDelMes.filter(g => g.categoria === cat).reduce((sum, g) => sum + g.monto, 0),
+    })).filter(d => d.gastado > 0);
+
+  // Detalles de imprevistos (lista de gastos individuales)
+  const detallesImprevistos = gastosDelMes
+    .filter(g => g.categoria === 'imprevistos')
+    .map(g => ({
+      label: g.descripcion || 'Imprevisto',
+      gastado: g.monto,
+    }));
 
   // Detalles de gustos por persona
   const gustosAle = gastosDelMes
@@ -180,8 +197,8 @@ export default function BudgetOverview() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[1, 2, 3].map(i => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map(i => (
           <div key={i} className="glass-card animate-pulse">
             <div className="h-20 bg-white/5 rounded-xl mb-4" />
             <div className="h-4 bg-white/5 rounded w-3/4 mb-2" />
@@ -201,7 +218,7 @@ export default function BudgetOverview() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Vales de Despensa */}
         <BudgetCard
           title="Despensa"
@@ -237,6 +254,18 @@ export default function BudgetOverview() {
           detalles={detallesGustos}
           tipo="gusto"
         />
+
+        {/* Fondo de Imprevistos */}
+        <BudgetCard
+          title="Imprevistos"
+          icon={<ShieldAlert className="w-5 h-5 text-white" />}
+          presupuesto={PRESUPUESTO_IMPREVISTOS}
+          gastado={gastosImprevistos}
+          color="bg-gradient-to-br from-red-500 to-orange-500"
+          bgGradient="from-red-500/20 to-orange-500/10"
+          detalles={detallesImprevistos.length > 0 ? detallesImprevistos : undefined}
+          tipo="esencial"
+        />
       </div>
 
       {/* Resumen rápido */}
@@ -246,26 +275,34 @@ export default function BudgetOverview() {
             <div>
               <p className="text-xs text-white/40">Total gastado</p>
               <p className="text-lg font-bold text-white">
-                {formatMoney(gastosVales + gastosEsenciales + gastosGustos)}
+                {formatMoney(gastosVales + gastosEsenciales + gastosGustos + gastosImprevistos)}
               </p>
             </div>
             <div>
               <p className="text-xs text-white/40">Presupuesto total</p>
               <p className="text-lg font-bold text-white/70">
-                {formatMoney(PRESUPUESTO_DESPENSA + PRESUPUESTO_ESENCIALES + PRESUPUESTO_GUSTOS)}
+                {formatMoney(PRESUPUESTO_DESPENSA + PRESUPUESTO_ESENCIALES + PRESUPUESTO_GUSTOS + PRESUPUESTO_IMPREVISTOS)}
               </p>
             </div>
+            {gastosImprevistos > 0 && (
+              <div>
+                <p className="text-xs text-red-400/70">Usado de imprevistos</p>
+                <p className="text-lg font-bold text-red-400">
+                  {formatMoney(gastosImprevistos)}
+                </p>
+              </div>
+            )}
           </div>
           <div className="text-right">
             <p className="text-xs text-white/40">Te queda</p>
             <p className={`text-lg font-bold ${
-              (PRESUPUESTO_DESPENSA + PRESUPUESTO_ESENCIALES + PRESUPUESTO_GUSTOS) - (gastosVales + gastosEsenciales + gastosGustos) >= 0
+              (PRESUPUESTO_DESPENSA + PRESUPUESTO_ESENCIALES + PRESUPUESTO_GUSTOS + PRESUPUESTO_IMPREVISTOS) - (gastosVales + gastosEsenciales + gastosGustos + gastosImprevistos) >= 0
                 ? 'text-green-400'
                 : 'text-red-400'
             }`}>
               {formatMoney(
-                (PRESUPUESTO_DESPENSA + PRESUPUESTO_ESENCIALES + PRESUPUESTO_GUSTOS) -
-                (gastosVales + gastosEsenciales + gastosGustos)
+                (PRESUPUESTO_DESPENSA + PRESUPUESTO_ESENCIALES + PRESUPUESTO_GUSTOS + PRESUPUESTO_IMPREVISTOS) -
+                (gastosVales + gastosEsenciales + gastosGustos + gastosImprevistos)
               )}
             </p>
           </div>

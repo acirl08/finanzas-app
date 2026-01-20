@@ -29,8 +29,8 @@ export default function BudgetAlertBanner({ onDismiss }: BudgetAlertBannerProps)
     const mesActual = today.toISOString().slice(0, 7);
     const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-    // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
-    const gastosVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+    // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
+    const gastosVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
     const totalGastado = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
 
     // Calculate percentage
