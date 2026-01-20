@@ -8,6 +8,14 @@ interface Message {
   content: string;
 }
 
+// Sanitize user input to prevent basic XSS
+function sanitizeInput(input: string): string {
+  return input
+    .trim()
+    .slice(0, 500) // Limit length
+    .replace(/[<>]/g, ''); // Remove potential HTML tags
+}
+
 export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -58,7 +66,7 @@ export default function FloatingChat() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'registrar_gasto',
-            params: { monto: parseFloat(monto), categoria, descripcion, titular, esFijo, conVales }
+            params: { monto: Number(monto), categoria, descripcion, titular, esFijo, conVales }
           })
         });
         const data = await res.json();
@@ -267,7 +275,7 @@ export default function FloatingChat() {
     }
 
     // 12. Procesar PAGO_DEUDA
-    const pagoDeudaRegex = /\[PAGO_DEUDA:([^:]+):(\d+)\]/;
+    const pagoDeudaRegex = /\[PAGO_DEUDA:([^:]+):(\d+(?:\.\d+)?)\]/;
     const pagoDeudaMatch = response.match(pagoDeudaRegex);
     if (pagoDeudaMatch) {
       const [, deudaNombre, monto] = pagoDeudaMatch;
@@ -275,7 +283,7 @@ export default function FloatingChat() {
         const res = await fetch('/api/finanzas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'registrar_pago_deuda', params: { deudaNombre, monto: parseInt(monto) } })
+          body: JSON.stringify({ action: 'registrar_pago_deuda', params: { deudaNombre, monto: parseFloat(monto) } })
         });
         const data = await res.json();
         showNotification(data.success ? data.message : (data.error || 'Error'), data.success ? 'success' : 'error');
@@ -286,7 +294,7 @@ export default function FloatingChat() {
     }
 
     // 13. Procesar SIMULAR
-    const simularRegex = /\[SIMULAR:(\d+)\]/;
+    const simularRegex = /\[SIMULAR:(\d+(?:\.\d+)?)\]/;
     const simularMatch = response.match(simularRegex);
     if (simularMatch) {
       const [, montoExtra] = simularMatch;
@@ -294,7 +302,7 @@ export default function FloatingChat() {
         const res = await fetch('/api/finanzas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'simular_pago_extra', params: { montoExtra: parseInt(montoExtra) } })
+          body: JSON.stringify({ action: 'simular_pago_extra', params: { montoExtra: parseFloat(montoExtra) } })
         });
         const data = await res.json();
         if (data.success) {
@@ -325,14 +333,53 @@ export default function FloatingChat() {
       cleanResponse = response.replace(editarRegex, '').trim();
     }
 
+    // 15. Procesar CORREGIR_ULTIMO (corrige el último gasto sin necesidad de ID)
+    const corregirUltimoRegex = /\[CORREGIR_ULTIMO:([^:]+):([^\]]+)\]/;
+    const corregirUltimoMatch = response.match(corregirUltimoRegex);
+    if (corregirUltimoMatch) {
+      const [, campo, valor] = corregirUltimoMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'corregir_ultimo_gasto', params: { campo, valor } })
+        });
+        const data = await res.json();
+        showNotification(data.success ? data.message : (data.error || 'Error'), data.success ? 'success' : 'error');
+      } catch (e) {
+        showNotification('Error de conexión', 'error');
+      }
+      cleanResponse = response.replace(corregirUltimoRegex, '').trim();
+    }
+
+    // 16. Procesar META (crear meta de ahorro)
+    const metaRegex = /\[META:([^:]+):(\d+(?:\.\d+)?)\]/;
+    const metaMatch = response.match(metaRegex);
+    if (metaMatch) {
+      const [, nombre, montoObjetivo] = metaMatch;
+      try {
+        const res = await fetch('/api/finanzas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'crear_meta_ahorro', params: { nombre, montoObjetivo: parseFloat(montoObjetivo) } })
+        });
+        const data = await res.json();
+        showNotification(data.success ? `Meta "${nombre}" creada` : (data.error || 'Error'), data.success ? 'success' : 'error');
+      } catch (e) {
+        showNotification('Error de conexión', 'error');
+      }
+      cleanResponse = response.replace(metaRegex, '').trim();
+    }
+
     return cleanResponse || response;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    const sanitized = sanitizeInput(input);
+    if (!sanitized || isLoading) return;
 
-    const userMessage = input.trim();
+    const userMessage = sanitized;
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
@@ -366,7 +413,10 @@ export default function FloatingChat() {
   const quickActions = [
     '¿Cuánto me queda?',
     '¿Cómo van las deudas?',
-    'Ver últimos gastos',
+    'Resumen del mes',
+    'Ver últimos 5 gastos',
+    '¿Cuánto en restaurantes?',
+    'Simular pago extra de $5000',
   ];
 
   return (
@@ -512,31 +562,47 @@ export default function FloatingChat() {
         </div>
       )}
 
-      {/* Floating Button */}
-      <button
-        onClick={() => {
-          setIsOpen(!isOpen);
-          setIsMinimized(false);
-        }}
-        className={`fixed bottom-6 right-4 lg:right-8 z-50 w-14 h-14 rounded-full shadow-lg shadow-purple-500/30 flex items-center justify-center transition-all duration-300 hover:scale-105 ${
-          isOpen
-            ? 'bg-white/10 backdrop-blur-xl border border-white/20'
-            : 'bg-gradient-to-r from-purple-500 to-pink-500'
-        }`}
-      >
-        {isOpen ? (
-          <X className="w-6 h-6 text-white" />
-        ) : (
-          <>
-            <MessageCircle className="w-6 h-6 text-white" />
-            {hasUnread && (
-              <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold">
-                1
-              </span>
-            )}
-          </>
+      {/* Floating Button with Tooltip */}
+      <div className="fixed bottom-6 right-4 lg:right-8 z-50">
+        {/* Tooltip - only show when chat is closed and no messages sent */}
+        {!isOpen && messages.length <= 1 && (
+          <div className="absolute bottom-full right-0 mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="bg-[#1a1a2e] border border-purple-500/30 rounded-xl px-4 py-2 shadow-xl shadow-purple-500/20 whitespace-nowrap">
+              <p className="text-sm text-white font-medium">💬 "Gasté $80 en café"</p>
+              <p className="text-xs text-white/50 mt-0.5">Escríbelo como si fuera WhatsApp</p>
+            </div>
+            {/* Arrow */}
+            <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-[#1a1a2e] border-r border-b border-purple-500/30 transform rotate-45" />
+          </div>
         )}
-      </button>
+
+        <button
+          onClick={() => {
+            setIsOpen(!isOpen);
+            setIsMinimized(false);
+          }}
+          className={`relative w-16 h-16 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-105 ${
+            isOpen
+              ? 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-black/20'
+              : 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-purple-500/40 animate-pulse hover:animate-none'
+          }`}
+        >
+          {isOpen ? (
+            <X className="w-7 h-7 text-white" />
+          ) : (
+            <>
+              <MessageCircle className="w-7 h-7 text-white" />
+              {hasUnread && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border-2 border-[#0A0F1C]">
+                  1
+                </span>
+              )}
+              {/* Pulse ring effect */}
+              <span className="absolute inset-0 rounded-full bg-purple-500 animate-ping opacity-25" />
+            </>
+          )}
+        </button>
+      </div>
     </>
   );
 }

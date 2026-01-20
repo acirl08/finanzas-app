@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Rocket, PartyPopper, Clock, Calendar, Target } from 'lucide-react';
+import { deudasIniciales, calcularProyeccionDeudas } from '@/lib/data';
 
 export default function FreedomCountdown() {
   const [timeLeft, setTimeLeft] = useState({
@@ -11,12 +12,20 @@ export default function FreedomCountdown() {
     seconds: 0,
   });
 
-  useEffect(() => {
-    const targetDate = new Date(2026, 11, 31, 23, 59, 59); // Dec 31, 2026
+  // Calcular fecha de libertad dinámica
+  const targetInfo = useMemo(() => {
+    const proyeccion = calcularProyeccionDeudas(deudasIniciales, 0);
+    const [year, month] = proyeccion.fechaLibertad.split('-').map(Number);
+    // Último día del mes de libertad
+    const targetDate = new Date(year, month, 0, 23, 59, 59);
+    const fechaCorta = new Date(proyeccion.fechaLibertad + '-01').toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
+    return { targetDate, fechaCorta };
+  }, []);
 
+  useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date();
-      const difference = targetDate.getTime() - now.getTime();
+      const difference = targetInfo.targetDate.getTime() - now.getTime();
 
       if (difference > 0) {
         setTimeLeft({
@@ -32,7 +41,7 @@ export default function FreedomCountdown() {
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [targetInfo]);
 
   const timeUnits = [
     { value: timeLeft.days, label: 'días', color: 'from-purple-500 to-pink-500' },
@@ -56,7 +65,7 @@ export default function FreedomCountdown() {
         </div>
         <div className="flex items-center gap-1 text-purple-400">
           <Target className="w-4 h-4" />
-          <span className="text-sm font-medium">Dic 2026</span>
+          <span className="text-sm font-medium">{targetInfo.fechaCorta}</span>
         </div>
       </div>
 

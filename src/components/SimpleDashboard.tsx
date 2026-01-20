@@ -1,20 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Sun, Moon, Flame, CheckCircle2, TrendingUp, AlertTriangle, ChevronDown, ChevronUp, Plus, Target, Sparkles } from 'lucide-react';
 import { subscribeToGastos, Gasto, subscribeToDeudas, calcularTotalesFromDeudas } from '@/lib/firestore';
-import { PRESUPUESTO_VARIABLE, PRESUPUESTO_GUSTOS, presupuestosPersonales } from '@/lib/data';
+import { PRESUPUESTO_VARIABLE, PRESUPUESTO_GUSTOS, presupuestosPersonales, calcularProyeccionDeudas } from '@/lib/data';
+import { formatMoney } from '@/lib/utils';
 import Link from 'next/link';
 import { Deuda } from '@/types';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 // Traffic light colors
 type StatusType = 'green' | 'yellow' | 'red';
@@ -124,9 +116,23 @@ export default function SimpleDashboard() {
     return totalDia <= presupuestoDiario;
   }).length;
 
-  // Debt progress
+  // Debt progress - calculado dinámicamente con intereses reales
   const totales = calcularTotalesFromDeudas(deudas);
-  const mesesParaLibertad = Math.ceil(totales.deudaTotal / 38450); // $38,450 mensual para deudas
+
+  // Proyección real con intereses compuestos
+  const proyeccion = useMemo(() => {
+    if (deudas.length === 0) return null;
+    return calcularProyeccionDeudas(deudas, 0);
+  }, [deudas]);
+
+  const mesesParaLibertad = proyeccion?.mesesParaLibertad || 0;
+
+  // Fecha de libertad formateada
+  const fechaLibertad = useMemo(() => {
+    if (!proyeccion) return 'Calculando...';
+    const fecha = new Date(proyeccion.fechaLibertad + '-01');
+    return fecha.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
+  }, [proyeccion]);
 
   const currentStatus = statusColors[status];
 
@@ -239,7 +245,7 @@ export default function SimpleDashboard() {
 
         <div className="flex justify-between text-sm">
           <span className="text-white/50">Faltan {mesesParaLibertad} meses</span>
-          <span className="text-purple-400 font-medium">Meta: Dic 2026</span>
+          <span className="text-purple-400 font-medium">Meta: {fechaLibertad}</span>
         </div>
       </div>
 

@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AlertTriangle, Clock, X, Briefcase, Calendar, Target } from 'lucide-react';
+import { INGRESO_MENSUAL, deudasIniciales, calcularProyeccionDeudas, calcularTotales } from '@/lib/data';
+import { formatMoney } from '@/lib/utils';
 
 interface SpendingFrictionModalProps {
   isOpen: boolean;
@@ -14,17 +16,25 @@ interface SpendingFrictionModalProps {
   gastadoHoy?: number;
 }
 
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 // Categories that don't need friction (essentials)
 const ESSENTIAL_CATEGORIES = ['renta', 'servicios', 'supermercado', 'transporte', 'salud'];
+
+// Componente para mostrar fecha de libertad dinámica
+function FechaMetaReminder() {
+  const proyeccion = useMemo(() => calcularProyeccionDeudas(deudasIniciales, 0), []);
+  const fechaLibertad = new Date(proyeccion.fechaLibertad + '-01');
+  const fechaFormateada = fechaLibertad.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+
+  return (
+    <div className="px-6 pb-6">
+      <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20">
+        <p className="text-xs text-center text-purple-300">
+          💭 Recuerda tu meta: ser libre de deudas en {fechaFormateada}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function SpendingFrictionModal({
   isOpen,
@@ -42,22 +52,42 @@ export default function SpendingFrictionModal({
   // Check if this is an essential category (no friction needed)
   const isEssential = ESSENTIAL_CATEGORIES.includes(categoria.toLowerCase());
 
-  // Impact calculations
-  const PAGO_MENSUAL_DEUDA = 38450;
-  const DIAS_POR_MES = 30;
-  const INGRESO_DIARIO = 109000 / 30; // ~$3,633/day
-  const HORAS_TRABAJO_DIA = 8;
-  const PAGO_POR_HORA = INGRESO_DIARIO / HORAS_TRABAJO_DIA; // ~$454/hour
+  // Memoized impact calculations - usando datos reales
+  const impactData = useMemo(() => {
+    // Calcular pago mensual real desde los totales de deudas
+    const totalesDeudas = calcularTotales(deudasIniciales);
+    const pagoMensualDeuda = totalesDeudas.pagosMinimos;
 
-  const diasRetraso = Math.ceil(monto / (PAGO_MENSUAL_DEUDA / DIAS_POR_MES));
-  const horasTrabajo = Math.ceil(monto / PAGO_POR_HORA);
+    const DIAS_POR_MES = 30;
+    const INGRESO_DIARIO = INGRESO_MENSUAL / DIAS_POR_MES;
+    const HORAS_TRABAJO_DIA = 8;
+    const PAGO_POR_HORA = INGRESO_DIARIO / HORAS_TRABAJO_DIA;
 
-  // TODAY's budget impact
-  const disponibleHoy = Math.max(0, presupuestoDiario - gastadoHoy);
-  const porcentajeDelDia = presupuestoDiario > 0 ? Math.round((monto / presupuestoDiario) * 100) : 0;
-  const quedaDespues = disponibleHoy - monto;
-  const excede = quedaDespues < 0;
+    const diasRetraso = Math.ceil(monto / (pagoMensualDeuda / DIAS_POR_MES));
+    const horasTrabajo = Math.ceil(monto / PAGO_POR_HORA);
 
+    const disponibleHoy = Math.max(0, presupuestoDiario - gastadoHoy);
+    const porcentajeDelDia = presupuestoDiario > 0 ? Math.round((monto / presupuestoDiario) * 100) : 0;
+    const quedaDespues = disponibleHoy - monto;
+    const excede = quedaDespues < 0;
+
+    return { diasRetraso, horasTrabajo, disponibleHoy, porcentajeDelDia, quedaDespues, excede };
+  }, [monto, presupuestoDiario, gastadoHoy]);
+
+  const { diasRetraso, horasTrabajo, disponibleHoy, porcentajeDelDia, quedaDespues, excede } = impactData;
+
+  // Handle essential categories - auto-confirm without showing modal
+  useEffect(() => {
+    if (isOpen && isEssential) {
+      // Use setTimeout to avoid calling onConfirm during render
+      const timeoutId = setTimeout(() => {
+        onConfirm();
+      }, 0);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOpen, isEssential, onConfirm]);
+
+  // Handle countdown timer for non-essential categories
   useEffect(() => {
     if (isOpen && !isEssential) {
       setCountdown(10);
@@ -75,20 +105,11 @@ export default function SpendingFrictionModal({
       }, 1000);
 
       return () => clearInterval(timer);
-    } else if (isEssential) {
-      // Skip friction for essential categories
-      setCanConfirm(true);
-      setCountdown(0);
     }
   }, [isOpen, isEssential]);
 
-  if (!isOpen) return null;
-
-  // Skip modal entirely for essentials
-  if (isEssential) {
-    onConfirm();
-    return null;
-  }
+  // Don't render modal if closed or essential category
+  if (!isOpen || isEssential) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -206,14 +227,8 @@ export default function SpendingFrictionModal({
           )}
         </div>
 
-        {/* Footer Reminder */}
-        <div className="px-6 pb-6">
-          <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20">
-            <p className="text-xs text-center text-purple-300">
-              💭 Recuerda tu meta: ser libre de deudas en Diciembre 2026
-            </p>
-          </div>
-        </div>
+        {/* Footer Reminder - fecha dinámica */}
+        <FechaMetaReminder />
       </div>
     </div>
   );

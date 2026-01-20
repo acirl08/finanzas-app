@@ -5,15 +5,7 @@ import GastoForm from '@/components/GastoForm';
 import { Sparkles, TrendingUp, AlertTriangle } from 'lucide-react';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE } from '@/lib/data';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from '@/lib/utils';
 
 export default function RegistrarPage() {
   const [gastos, setGastos] = useState<Gasto[]>([]);

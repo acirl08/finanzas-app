@@ -1,18 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Receipt, Filter, Calendar, TrendingDown, Search, Plus } from 'lucide-react';
+import { Receipt, Filter, Calendar, TrendingDown, Search, Plus, Smartphone } from 'lucide-react';
 import Link from 'next/link';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE } from '@/lib/data';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from '@/lib/utils';
+import SwipeableGastoItem from '@/components/SwipeableGastoItem';
 
 function getCategoryIcon(categoria: string) {
   const icons: Record<string, string> = {
@@ -248,38 +242,21 @@ export default function GastosPage() {
           <div className="glass-card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-white">Transacciones</h3>
-              <span className="text-sm text-white/40">{gastosFiltrados.length} resultados</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-white/40">{gastosFiltrados.length} resultados</span>
+                <span className="hidden sm:flex items-center gap-1 text-xs text-white/30 bg-white/5 px-2 py-1 rounded-lg">
+                  <Smartphone className="w-3 h-3" />
+                  Desliza para eliminar
+                </span>
+              </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {gastosFiltrados.map((gasto) => (
-                <div
+                <SwipeableGastoItem
                   key={gasto.id}
-                  className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getCategoryColor(gasto.categoria)} flex items-center justify-center text-xl`}>
-                      {getCategoryIcon(gasto.categoria)}
-                    </div>
-                    <div>
-                      <p className="font-medium text-white">{gasto.descripcion}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-white/40">{formatDate(gasto.fecha)}</span>
-                        <span className="w-1 h-1 rounded-full bg-white/20" />
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          gasto.titular === 'alejandra' ? 'bg-pink-500/20 text-pink-400' :
-                          gasto.titular === 'ricardo' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-green-500/20 text-green-400'
-                        }`}>
-                          {gasto.titular.charAt(0).toUpperCase() + gasto.titular.slice(1)}
-                        </span>
-                        <span className="w-1 h-1 rounded-full bg-white/20" />
-                        <span className="text-xs text-white/30 capitalize">{gasto.categoria}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="font-bold text-lg text-white">{formatMoney(gasto.monto)}</p>
-                </div>
+                  gasto={gasto}
+                />
               ))}
             </div>
 

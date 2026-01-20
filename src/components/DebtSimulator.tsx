@@ -2,14 +2,7 @@
 
 import { useState } from 'react';
 import { Calculator, TrendingDown, Calendar, DollarSign, Sparkles } from 'lucide-react';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from '@/lib/utils';
 
 interface SimulationResult {
   montoExtra: number;

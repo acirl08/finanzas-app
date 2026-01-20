@@ -4,15 +4,7 @@ import { useState, useEffect } from 'react';
 import { User, Users, Wallet } from 'lucide-react';
 import { presupuestosPersonales, PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from '@/lib/utils';
 
 export default function PresupuestosPersonales() {
   const [gastos, setGastos] = useState<Gasto[]>([]);

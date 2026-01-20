@@ -1,19 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, DollarSign, CreditCard, Bell, Save, Check, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Settings, DollarSign, CreditCard, Bell, Save, Check, AlertTriangle, RotateCcw, Download } from 'lucide-react';
+import ExportData from '@/components/ExportData';
 import { deudasIniciales, suscripciones, INGRESO_MENSUAL, VALES_DESPENSA } from '@/lib/data';
 import { subscribeToDeudas, updateDeuda, updateConfiguracion, getConfiguracion } from '@/lib/firestore';
+import { formatMoney } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Deuda } from '@/types';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
 
 export default function ConfigPage() {
   const [activeTab, setActiveTab] = useState('general');
@@ -171,6 +165,7 @@ export default function ConfigPage() {
     { id: 'general', label: 'General', icon: Settings },
     { id: 'deudas', label: 'Deudas', icon: CreditCard },
     { id: 'suscripciones', label: 'Suscripciones', icon: DollarSign },
+    { id: 'exportar', label: 'Exportar', icon: Download },
   ];
 
   return (
@@ -457,6 +452,11 @@ export default function ConfigPage() {
             </p>
           </div>
         </div>
+      )}
+
+      {/* Exportar Tab */}
+      {activeTab === 'exportar' && (
+        <ExportData />
       )}
     </div>
   );

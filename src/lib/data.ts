@@ -269,3 +269,210 @@ export function calcularDisponible(deudas: Deuda[]) {
 
   return INGRESO_MENSUAL - gastosFijosTotal - pagosMinimos;
 }
+
+// ============================================
+// CÁLCULO REAL DE INTERESES (Método Avalancha)
+// ============================================
+
+interface ProyeccionMes {
+  mes: number;
+  fecha: string;
+  saldoTotal: number;
+  interesesMes: number;
+  pagoCapital: number;
+  deudasActivas: number;
+  deudasLiquidadas: string[];
+}
+
+interface ResultadoProyeccion {
+  mesesParaLibertad: number;
+  fechaLibertad: string;
+  totalInteresesPagados: number;
+  totalPagado: number;
+  proyeccionMensual: ProyeccionMes[];
+  ordenLiquidacion: { nombre: string; fechaLiquidacion: string; interesesPagados: number }[];
+}
+
+/**
+ * Calcula la proyección de pago de deudas usando interés compuesto real
+ * Método: Avalancha (pagar primero las de mayor CAT)
+ */
+export function calcularProyeccionDeudas(
+  deudas: Deuda[],
+  pagoMensualExtra: number = 0
+): ResultadoProyeccion {
+  // Crear copia de deudas para simular
+  let deudasSimuladas = deudas
+    .filter(d => !d.liquidada && d.saldoActual > 0)
+    .map(d => ({
+      ...d,
+      saldo: d.saldoActual,
+      tasaMensual: d.cat / 100 / 12, // CAT anual a tasa mensual
+      interesesAcumulados: 0
+    }))
+    .sort((a, b) => b.cat - a.cat); // Ordenar por CAT descendente (avalancha)
+
+  const pagosMinimosTotal = deudasSimuladas.reduce((sum, d) => sum + d.pagoMinimo, 0);
+  const pagoMensualTotal = pagosMinimosTotal + pagoMensualExtra;
+
+  const proyeccion: ProyeccionMes[] = [];
+  const ordenLiquidacion: { nombre: string; fechaLiquidacion: string; interesesPagados: number }[] = [];
+
+  let mes = 0;
+  let totalInteresesPagados = 0;
+  let totalPagado = 0;
+  const hoy = new Date();
+  const maxMeses = 120; // Límite de 10 años
+
+  while (deudasSimuladas.some(d => d.saldo > 0) && mes < maxMeses) {
+    mes++;
+    const fechaMes = new Date(hoy);
+    fechaMes.setMonth(hoy.getMonth() + mes);
+
+    let interesesEsteMes = 0;
+    let pagoCapitalEsteMes = 0;
+    const liquidadasEsteMes: string[] = [];
+
+    // 1. Calcular intereses de cada deuda
+    deudasSimuladas.forEach(d => {
+      if (d.saldo > 0) {
+        const interes = d.saldo * d.tasaMensual;
+        d.saldo += interes;
+        d.interesesAcumulados += interes;
+        interesesEsteMes += interes;
+      }
+    });
+
+    // 2. Pagar mínimos primero
+    let pagoDisponible = pagoMensualTotal;
+    deudasSimuladas.forEach(d => {
+      if (d.saldo > 0) {
+        const pagoEstaDeuda = Math.min(d.pagoMinimo, d.saldo);
+        d.saldo -= pagoEstaDeuda;
+        pagoDisponible -= pagoEstaDeuda;
+        pagoCapitalEsteMes += pagoEstaDeuda;
+
+        if (d.saldo <= 0) {
+          d.saldo = 0;
+          liquidadasEsteMes.push(d.nombre);
+          ordenLiquidacion.push({
+            nombre: d.nombre,
+            fechaLiquidacion: fechaMes.toISOString().slice(0, 7),
+            interesesPagados: Math.round(d.interesesAcumulados)
+          });
+        }
+      }
+    });
+
+    // 3. Aplicar excedente a la deuda de mayor CAT (avalancha)
+    while (pagoDisponible > 0) {
+      const deudaPrioritaria = deudasSimuladas.find(d => d.saldo > 0);
+      if (!deudaPrioritaria) break;
+
+      const pagoExtra = Math.min(pagoDisponible, deudaPrioritaria.saldo);
+      deudaPrioritaria.saldo -= pagoExtra;
+      pagoDisponible -= pagoExtra;
+      pagoCapitalEsteMes += pagoExtra;
+
+      if (deudaPrioritaria.saldo <= 0) {
+        deudaPrioritaria.saldo = 0;
+        if (!liquidadasEsteMes.includes(deudaPrioritaria.nombre)) {
+          liquidadasEsteMes.push(deudaPrioritaria.nombre);
+          ordenLiquidacion.push({
+            nombre: deudaPrioritaria.nombre,
+            fechaLiquidacion: fechaMes.toISOString().slice(0, 7),
+            interesesPagados: Math.round(deudaPrioritaria.interesesAcumulados)
+          });
+        }
+      }
+    }
+
+    totalInteresesPagados += interesesEsteMes;
+    totalPagado += pagoCapitalEsteMes;
+
+    proyeccion.push({
+      mes,
+      fecha: fechaMes.toISOString().slice(0, 7),
+      saldoTotal: Math.round(deudasSimuladas.reduce((sum, d) => sum + d.saldo, 0)),
+      interesesMes: Math.round(interesesEsteMes),
+      pagoCapital: Math.round(pagoCapitalEsteMes),
+      deudasActivas: deudasSimuladas.filter(d => d.saldo > 0).length,
+      deudasLiquidadas: liquidadasEsteMes
+    });
+  }
+
+  const fechaLibertad = new Date(hoy);
+  fechaLibertad.setMonth(hoy.getMonth() + mes);
+
+  return {
+    mesesParaLibertad: mes,
+    fechaLibertad: fechaLibertad.toISOString().slice(0, 7),
+    totalInteresesPagados: Math.round(totalInteresesPagados),
+    totalPagado: Math.round(totalPagado),
+    proyeccionMensual: proyeccion,
+    ordenLiquidacion
+  };
+}
+
+/**
+ * Compara escenarios: sin pago extra vs con pago extra
+ */
+export function compararEscenarios(deudas: Deuda[], montoExtra: number) {
+  const sinExtra = calcularProyeccionDeudas(deudas, 0);
+  const conExtra = calcularProyeccionDeudas(deudas, montoExtra);
+
+  return {
+    sinExtra,
+    conExtra,
+    mesesAhorrados: sinExtra.mesesParaLibertad - conExtra.mesesParaLibertad,
+    interesesAhorrados: sinExtra.totalInteresesPagados - conExtra.totalInteresesPagados,
+    diferenciaTotalPagado: sinExtra.totalPagado - conExtra.totalPagado
+  };
+}
+
+/**
+ * Calcula el "health score" financiero (0-100)
+ */
+export function calcularHealthScore(
+  deudaTotal: number,
+  ingresoMensual: number,
+  gastosMes: number,
+  ahorroMes: number
+): { score: number; nivel: string; factores: { nombre: string; valor: number; peso: number }[] } {
+  // Factor 1: Ratio deuda/ingreso anual (40% del score)
+  const ingresoAnual = Math.max(1, ingresoMensual * 12); // Evitar división por cero
+  const ratioDeudaIngreso = deudaTotal / ingresoAnual;
+  const scoreDeuda = Math.max(0, 100 - (ratioDeudaIngreso * 100));
+
+  // Factor 2: Tasa de ahorro (30% del score)
+  const tasaAhorro = ingresoMensual > 0 ? ahorroMes / ingresoMensual : 0;
+  const scoreAhorro = Math.min(100, tasaAhorro * 500); // 20% ahorro = 100 puntos
+
+  // Factor 3: Control de gastos vs presupuesto (30% del score)
+  const presupuesto = Math.max(1, PRESUPUESTO_VARIABLE); // Evitar división por cero
+  const ratioGastoPresupuesto = gastosMes / presupuesto;
+  const scoreGastos = ratioGastoPresupuesto <= 1
+    ? 100 - ((ratioGastoPresupuesto - 0.5) * 100) // Bonus si gasta menos del 50%
+    : Math.max(0, 100 - ((ratioGastoPresupuesto - 1) * 200)); // Penaliza si se pasa
+
+  const factores = [
+    { nombre: 'Ratio Deuda/Ingreso', valor: Math.round(scoreDeuda), peso: 0.4 },
+    { nombre: 'Tasa de Ahorro', valor: Math.round(scoreAhorro), peso: 0.3 },
+    { nombre: 'Control de Gastos', valor: Math.round(scoreGastos), peso: 0.3 }
+  ];
+
+  const score = Math.round(
+    scoreDeuda * 0.4 +
+    scoreAhorro * 0.3 +
+    scoreGastos * 0.3
+  );
+
+  let nivel: string;
+  if (score >= 80) nivel = 'Excelente';
+  else if (score >= 60) nivel = 'Bueno';
+  else if (score >= 40) nivel = 'Regular';
+  else if (score >= 20) nivel = 'Precaución';
+  else nivel = 'Crítico';
+
+  return { score, nivel, factores };
+}

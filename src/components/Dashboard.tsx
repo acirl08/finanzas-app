@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Deuda, Suscripcion } from '@/types';
-import { calcularGastosFijos, INGRESO_MENSUAL, suscripciones as defaultSuscripciones } from '@/lib/data';
+import { calcularGastosFijos, INGRESO_MENSUAL, suscripciones as defaultSuscripciones, gastosFijos, calcularProyeccionDeudas, compararEscenarios } from '@/lib/data';
 import { subscribeToDeudas, calcularTotalesFromDeudas, initializeFirestoreData } from '@/lib/firestore';
+import { formatMoney, formatMoneyCompact, MESES_CORTOS } from '@/lib/utils';
 import {
   TrendingDown,
   ArrowUpRight,
@@ -27,15 +28,6 @@ import FutureSelfCard from './FutureSelfCard';
 import CelebrationModal from './CelebrationModal';
 import PaymentPlanExplainer from './PaymentPlanExplainer';
 import BudgetOverview from './BudgetOverview';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 // Animated number component with counting effect
 function AnimatedNumber({ value, duration = 1500, prefix = '', suffix = '', className = '' }: {
@@ -234,38 +226,7 @@ function EducationalTooltip({ title, content }: { title: string, content: string
   );
 }
 
-// Data for charts - Updated colors to match new palette
-// Datos del gráfico de progreso - Enero 2026, apenas empezando
-// pagado = lo que realmente se ha pagado (acumulado)
-// proyectado = la proyección de pagos si se sigue el plan
-const monthlyData = [
-  { name: 'Ene', pagado: 0, deuda: 491442, proyectado: 38450 },
-  { name: 'Feb', pagado: null, deuda: null, proyectado: 76900 },
-  { name: 'Mar', pagado: null, deuda: null, proyectado: 115350 },
-  { name: 'Abr', pagado: null, deuda: null, proyectado: 153800 },
-  { name: 'May', pagado: null, deuda: null, proyectado: 192250 },
-  { name: 'Jun', pagado: null, deuda: null, proyectado: 230700 },
-  { name: 'Jul', pagado: null, deuda: null, proyectado: 269150 },
-  { name: 'Ago', pagado: null, deuda: null, proyectado: 307600 },
-  { name: 'Sep', pagado: null, deuda: null, proyectado: 346050 },
-  { name: 'Oct', pagado: null, deuda: null, proyectado: 384500 },
-  { name: 'Nov', pagado: null, deuda: null, proyectado: 422950 },
-  { name: 'Dic', pagado: null, deuda: null, proyectado: 491442 },
-];
-
-// Sparkline data - Como es enero, mostramos solo la deuda inicial
-const deudaSparkline = [491442, 491442, 491442, 491442, 491442, 491442];
-const ingresoSparkline = [109000, 109000, 109000, 109000, 109000, 109000];
-const gastosSparkline = [64550, 64550, 64550, 64550, 64550, 64550];
-const disponibleSparkline = [38450, 38450, 38450, 38450, 38450, 38450];
-
-const expenseData = [
-  { name: 'Deudas', value: 32099, color: '#F87171' },
-  { name: 'Renta', value: 12700, color: '#8B5CF6' },
-  { name: 'Carro', value: 13000, color: '#60A5FA' },
-  { name: 'Servicios', value: 3200, color: '#FBBF24' },
-  { name: 'Subs', value: 3551, color: '#6EE7B7' },
-];
+// NOTA: Los datos de gráficos se calculan dinámicamente en el componente usando useMemo
 
 export default function Dashboard() {
   const [deudas, setDeudas] = useState<Deuda[]>([]);
@@ -296,6 +257,111 @@ export default function Dashboard() {
   const disponible = INGRESO_MENSUAL - gastosFijosTotal - totales.pagosMinimos;
 
   const deudasActivas = deudas.filter(d => !d.liquidada).sort((a, b) => a.prioridad - b.prioridad);
+
+  // ============================================
+  // DATOS CALCULADOS DINÁMICAMENTE
+  // ============================================
+
+  // Proyección de deudas con intereses reales
+  const proyeccion = useMemo(() => {
+    if (deudas.length === 0) return null;
+    return calcularProyeccionDeudas(deudas, 0);
+  }, [deudas]);
+
+  // Comparación de escenarios para mostrar ahorro con método avalancha
+  const escenarios = useMemo(() => {
+    if (deudas.length === 0) return null;
+    // Comparar pagar solo mínimos vs pagar extra disponible
+    return compararEscenarios(deudas, disponible - totales.pagosMinimos);
+  }, [deudas, disponible, totales.pagosMinimos]);
+
+  // Datos para el gráfico de progreso mensual
+  const monthlyData = useMemo(() => {
+    if (!proyeccion) return [];
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+
+    // Generar datos para los próximos 12 meses
+    return proyeccion.proyeccionMensual.slice(0, 12).map((p, i) => {
+      const mesIndex = (mesActual + i + 1) % 12;
+      const esMesActual = i === 0;
+      const totalPagado = totales.deudaInicial - p.saldoTotal;
+
+      return {
+        name: MESES_CORTOS[mesIndex],
+        pagado: esMesActual ? totales.deudaPagada : null,
+        deuda: p.saldoTotal,
+        proyectado: totalPagado
+      };
+    });
+  }, [proyeccion, totales]);
+
+  // Sparklines basados en la proyección
+  const deudaSparkline = useMemo(() => {
+    if (!proyeccion) return Array(6).fill(totales.deudaTotal);
+    return proyeccion.proyeccionMensual.slice(0, 6).map(p => p.saldoTotal);
+  }, [proyeccion, totales.deudaTotal]);
+
+  const ingresoSparkline = useMemo(() => Array(6).fill(INGRESO_MENSUAL), []);
+
+  const gastosSparkline = useMemo(() => Array(6).fill(gastosFijosTotal), [gastosFijosTotal]);
+
+  const disponibleSparkline = useMemo(() => {
+    return Array(6).fill(disponible > 0 ? disponible : 0);
+  }, [disponible]);
+
+  // Datos para pie chart de distribución de gastos (calculados de datos reales)
+  const expenseData = useMemo(() => {
+    const renta = gastosFijos.find(g => g.nombre === 'Renta')?.monto || 0;
+    const carro = gastosFijos.find(g => g.nombre === 'Pago de carro')?.monto || 0;
+    const serviciosMensuales = gastosFijos
+      .filter(g => g.categoria === 'servicios')
+      .reduce((sum, g) => sum + (g.frecuencia === 'bimestral' ? g.monto / 2 : g.monto), 0);
+    const totalSubs = defaultSuscripciones.reduce((sum, s) => sum + s.monto, 0);
+
+    return [
+      { name: 'Deudas', value: totales.pagosMinimos, color: '#F87171' },
+      { name: 'Renta', value: renta, color: '#8B5CF6' },
+      { name: 'Carro', value: carro, color: '#60A5FA' },
+      { name: 'Servicios', value: Math.round(serviciosMensuales), color: '#FBBF24' },
+      { name: 'Subs', value: totalSubs, color: '#6EE7B7' },
+    ];
+  }, [totales.pagosMinimos]);
+
+  const totalGastosFijos = useMemo(() => {
+    return expenseData.reduce((sum, item) => sum + item.value, 0);
+  }, [expenseData]);
+
+  // Datos para timeline de deudas
+  const timelineData = useMemo(() => {
+    if (!proyeccion) return [];
+    const hoy = new Date();
+
+    return proyeccion.proyeccionMensual.slice(0, 12).map((p, i) => {
+      const fecha = new Date(hoy);
+      fecha.setMonth(hoy.getMonth() + i + 1);
+      const mesIndex = fecha.getMonth();
+
+      return {
+        mes: MESES_CORTOS[mesIndex],
+        deuda: p.saldoTotal,
+        pagado: totales.deudaInicial - p.saldoTotal
+      };
+    });
+  }, [proyeccion, totales.deudaInicial]);
+
+  // Fecha de libertad formateada
+  const fechaLibertadFormateada = useMemo(() => {
+    if (!proyeccion) return 'Calculando...';
+    const fecha = new Date(proyeccion.fechaLibertad + '-01');
+    return fecha.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
+  }, [proyeccion]);
+
+  // Ahorro de intereses con método avalancha
+  const ahorroIntereses = useMemo(() => {
+    if (!escenarios) return 0;
+    return escenarios.interesesAhorrados;
+  }, [escenarios]);
 
   // Show loading skeleton while fetching data
   if (loading) {
@@ -490,7 +556,7 @@ export default function Dashboard() {
               <p className="text-lg font-bold text-[#6EE7B7]">{formatMoney(totales.deudaPagada)}</p>
             </div>
             <div>
-              <p className="text-xs text-[#6B7280]">Meta Dic 2026</p>
+              <p className="text-xs text-[#6B7280]">Meta {fechaLibertadFormateada}</p>
               <p className="text-lg font-bold text-white">{formatMoney(totales.deudaInicial)}</p>
             </div>
             <div>
@@ -563,7 +629,7 @@ export default function Dashboard() {
               <span className="text-xs text-[#9CA3AF]">Proyectado</span>
             </div>
             <div className="ml-auto">
-              <span className="text-xs text-[#6B7280]">Actualizado: Ene 2026</span>
+              <span className="text-xs text-[#6B7280]">Actualizado: {new Date().toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}</span>
             </div>
           </div>
         </div>
@@ -619,7 +685,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
               <div className="donut-center">
                 <p className="text-xs text-[#6B7280]">Total</p>
-                <p className="text-xl font-bold text-white">$64.5k</p>
+                <p className="text-xl font-bold text-white">{formatMoneyCompact(totalGastosFijos)}</p>
               </div>
             </div>
 
@@ -638,7 +704,7 @@ export default function Dashboard() {
                       {formatMoney(item.value)}
                     </span>
                     <span className="text-xs text-[#6B7280] ml-2">
-                      {Math.round((item.value / 64550) * 100)}%
+                      {Math.round((item.value / totalGastosFijos) * 100)}%
                     </span>
                   </div>
                 </div>
@@ -766,7 +832,7 @@ export default function Dashboard() {
               Total pagos mínimos: <span className="text-white font-semibold">{formatMoney(totales.pagosMinimos)}</span>
             </div>
             <div className="text-xs text-[#6B7280]">
-              Interés ahorrado con avalancha: <span className="text-[#6EE7B7] font-semibold">~$156,320</span>
+              Interés ahorrado con avalancha: <span className="text-[#6EE7B7] font-semibold">{formatMoneyCompact(ahorroIntereses)}</span>
             </div>
           </div>
         </div>
@@ -833,27 +899,27 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Timeline 2026 - Enhanced with area chart */}
+      {/* Timeline - Enhanced with area chart */}
       <div className="glass-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
             <Calendar className="w-5 h-5 text-[#8B5CF6]" />
-            <span className="font-semibold text-white">Timeline 2026</span>
+            <span className="font-semibold text-white">Timeline de Libertad</span>
             <span className="text-[#6B7280] text-sm hidden sm:inline">/ Libertad Financiera</span>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
             <div className="text-center sm:text-right">
               <p className="text-xs text-[#6B7280]">Meta</p>
-              <p className="text-sm font-bold text-[#6EE7B7]">Dic 2026</p>
+              <p className="text-sm font-bold text-[#6EE7B7]">{fechaLibertadFormateada}</p>
             </div>
             <div className="text-center sm:text-right">
               <p className="text-xs text-[#6B7280]">Meses</p>
-              <p className="text-sm font-bold text-white">11</p>
+              <p className="text-sm font-bold text-white">{proyeccion?.mesesParaLibertad || '-'}</p>
             </div>
             <div className="text-center sm:text-right">
               <p className="text-xs text-[#6B7280]">Ahorro</p>
-              <p className="text-sm font-bold text-[#6EE7B7]">~$156k</p>
+              <p className="text-sm font-bold text-[#6EE7B7]">{formatMoneyCompact(ahorroIntereses)}</p>
             </div>
           </div>
         </div>
@@ -862,20 +928,7 @@ export default function Dashboard() {
         {/* Debt decline area chart */}
         <div className="h-32 mb-6">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={[
-              { mes: 'Ene', deuda: 491442, pagado: 0 },
-              { mes: 'Feb', deuda: 452992, pagado: 38450 },
-              { mes: 'Mar', deuda: 414542, pagado: 76900 },
-              { mes: 'Abr', deuda: 376092, pagado: 115350 },
-              { mes: 'May', deuda: 337642, pagado: 153800 },
-              { mes: 'Jun', deuda: 299192, pagado: 192250 },
-              { mes: 'Jul', deuda: 260742, pagado: 230700 },
-              { mes: 'Ago', deuda: 222292, pagado: 269150 },
-              { mes: 'Sep', deuda: 183842, pagado: 307600 },
-              { mes: 'Oct', deuda: 145392, pagado: 346050 },
-              { mes: 'Nov', deuda: 106942, pagado: 384500 },
-              { mes: 'Dic', deuda: 0, pagado: 491442 },
-            ]}>
+            <AreaChart data={timelineData}>
               <defs>
                 <linearGradient id="deudaGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#F87171" stopOpacity={0.3}/>
@@ -905,62 +958,56 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Milestone cards */}
+        {/* Milestone cards - Generados dinámicamente desde proyección */}
         <div className="flex gap-3 overflow-x-auto pb-2">
-          {[
-            { mes: 'Ene', deudas: ['Rappi', 'Nu Ale', 'Amex Plat'], status: 'current', monto: 21518 },
-            { mes: 'Feb', deudas: ['HEB', 'Nu Ricardo'], status: 'pending', monto: 49751 },
-            { mes: 'Abr', deudas: ['Santander LikeU'], status: 'pending', monto: 66138 },
-            { mes: 'Jun', deudas: ['Amex Gold'], status: 'pending', monto: 91622 },
-            { mes: 'Ago', deudas: ['Banorte/Invex'], status: 'pending', monto: 49060 },
-            { mes: 'Oct', deudas: ['Crédito Personal'], status: 'pending', monto: 91767 },
-            { mes: 'Nov', deudas: ['BBVA'], status: 'pending', monto: 121586 },
-            { mes: 'Dic', deudas: ['LIBRE!'], status: 'goal', monto: 0 },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className={`flex-shrink-0 w-36 p-3 rounded-xl transition-all hover-lift ${
-                item.status === 'current'
-                  ? 'bg-gradient-to-br from-[#8B5CF6]/30 to-[#F472B6]/20 border-2 border-[#8B5CF6]'
-                  : item.status === 'goal'
-                  ? 'bg-gradient-to-br from-[#6EE7B7]/30 to-[#34d399]/20 border-2 border-[#6EE7B7]'
-                  : 'bg-[#1C2128] border border-[#30363D] hover:border-[#484F58]'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-lg font-bold ${
-                  item.status === 'current' ? 'text-[#8B5CF6]' :
-                  item.status === 'goal' ? 'text-[#6EE7B7]' : 'text-white'
-                }`}>{item.mes}</span>
-                {item.status === 'current' && (
-                  <span className="w-2 h-2 rounded-full bg-[#8B5CF6] animate-pulse" />
+          {proyeccion?.ordenLiquidacion.map((liq, i) => {
+            const fechaLiq = new Date(liq.fechaLiquidacion + '-01');
+            const mesLabel = MESES_CORTOS[fechaLiq.getMonth()];
+            const isFirst = i === 0;
+            const isLast = i === proyeccion.ordenLiquidacion.length - 1;
+
+            return (
+              <div
+                key={i}
+                className={`flex-shrink-0 w-36 p-3 rounded-xl transition-all hover-lift ${
+                  isFirst
+                    ? 'bg-gradient-to-br from-[#8B5CF6]/30 to-[#F472B6]/20 border-2 border-[#8B5CF6]'
+                    : 'bg-[#1C2128] border border-[#30363D] hover:border-[#484F58]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-lg font-bold ${
+                    isFirst ? 'text-[#8B5CF6]' : 'text-white'
+                  }`}>{mesLabel}</span>
+                  {isFirst && (
+                    <span className="w-2 h-2 rounded-full bg-[#8B5CF6] animate-pulse" />
+                  )}
+                </div>
+                <p className="text-xs text-[#9CA3AF] truncate">{liq.nombre}</p>
+                {liq.interesesPagados > 0 && (
+                  <p className="text-xs text-[#F87171] mt-2 font-medium">
+                    Int: {formatMoney(liq.interesesPagados)}
+                  </p>
                 )}
-                {item.status === 'goal' && (
-                  <Target className="w-4 h-4 text-[#6EE7B7]" />
+                {isFirst && (
+                  <div className="mt-2">
+                    <span className="text-xs bg-[#8B5CF6] px-2 py-0.5 rounded-full text-white">Próxima</span>
+                  </div>
                 )}
               </div>
-              <div className="space-y-1">
-                {item.deudas.map((deuda, j) => (
-                  <p key={j} className="text-xs text-[#9CA3AF] truncate">{deuda}</p>
-                ))}
-              </div>
-              {item.monto > 0 && (
-                <p className="text-xs text-[#F87171] mt-2 font-medium">
-                  -{formatMoney(item.monto)}
-                </p>
-              )}
-              {item.status === 'current' && (
-                <div className="mt-2">
-                  <span className="text-xs bg-[#8B5CF6] px-2 py-0.5 rounded-full text-white">Ahora</span>
-                </div>
-              )}
-              {item.status === 'goal' && (
-                <div className="mt-2">
-                  <span className="text-xs bg-[#6EE7B7] px-2 py-0.5 rounded-full text-[#0D1117] font-semibold">Meta</span>
-                </div>
-              )}
+            );
+          })}
+          {/* Card de LIBRE al final */}
+          <div className="flex-shrink-0 w-36 p-3 rounded-xl transition-all hover-lift bg-gradient-to-br from-[#6EE7B7]/30 to-[#34d399]/20 border-2 border-[#6EE7B7]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-lg font-bold text-[#6EE7B7]">{fechaLibertadFormateada.split(' ')[0]}</span>
+              <Target className="w-4 h-4 text-[#6EE7B7]" />
             </div>
-          ))}
+            <p className="text-xs text-[#9CA3AF]">¡LIBRE!</p>
+            <div className="mt-2">
+              <span className="text-xs bg-[#6EE7B7] px-2 py-0.5 rounded-full text-[#0D1117] font-semibold">Meta</span>
+            </div>
+          </div>
         </div>
 
         {/* Progress bar */}

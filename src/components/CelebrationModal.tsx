@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { PartyPopper, Sparkles, Trophy, Flame, Star, X } from 'lucide-react';
+import { formatMoney } from '@/lib/utils';
 
 interface CelebrationModalProps {
   isOpen: boolean;
@@ -13,15 +14,6 @@ interface CelebrationModalProps {
     debtName?: string;
     milestone?: string;
   };
-}
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 // Confetti particle component

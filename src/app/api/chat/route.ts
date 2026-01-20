@@ -1,5 +1,38 @@
 import { NextResponse } from 'next/server';
 
+// Input validation constants
+const MAX_MESSAGE_LENGTH = 1000;
+const MAX_MESSAGES_COUNT = 50;
+
+/**
+ * Sanitize user input to prevent injection attacks
+ * Removes control characters and limits length
+ */
+function sanitizeInput(input: string): string {
+  if (typeof input !== 'string') return '';
+
+  // Remove control characters except newlines and tabs
+  // eslint-disable-next-line no-control-regex
+  const sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+  // Trim and limit length
+  return sanitized.trim().slice(0, MAX_MESSAGE_LENGTH);
+}
+
+/**
+ * Validate message structure
+ */
+function isValidMessage(msg: unknown): msg is { role: string; content: string } {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    'role' in msg &&
+    'content' in msg &&
+    typeof (msg as any).role === 'string' &&
+    typeof (msg as any).content === 'string'
+  );
+}
+
 const SYSTEM_CONTEXT = `Eres un asistente financiero personal para Alejandra y Ricardo. Responde SIEMPRE en español y de forma MUY breve (1-2 oraciones max).
 
 CONTEXTO:
@@ -32,6 +65,11 @@ DEUDAS:
 [PAGO_DEUDA:nombre:monto] - Registrar pago a deuda
 [SIMULAR:monto] - Simular pago extra
 
+METAS DE AHORRO:
+[META:nombre:monto] - Crear meta de ahorro
+- Ejemplo: [META:Fondo emergencia:50000]
+- Ejemplo: [META:Vacaciones:15000]
+
 REGLAS IMPORTANTES:
 1. Si dicen "me equivoqué", "está mal", "era de X no de Y" → usa [CORREGIR_ULTIMO:campo:valor] o [BORRAR:ultimo]
 2. NUNCA pidas IDs al usuario. Usa [CORREGIR_ULTIMO] para corregir el último gasto.
@@ -42,15 +80,49 @@ REGLAS IMPORTANTES:
 
 export async function POST(request: Request) {
   try {
-    const { messages } = await request.json();
+    // Parse request body with validation
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ message: 'Formato de solicitud inválido.' }, { status: 400 });
+    }
+
+    // Validate body structure
+    if (typeof body !== 'object' || body === null || !('messages' in body)) {
+      return NextResponse.json({ message: 'Solicitud inválida.' }, { status: 400 });
+    }
+
+    const { messages } = body as { messages: unknown };
+
+    // Validate messages is an array
+    if (!Array.isArray(messages)) {
+      return NextResponse.json({ message: 'Formato de mensajes inválido.' }, { status: 400 });
+    }
+
+    // Limit number of messages to prevent abuse
+    if (messages.length > MAX_MESSAGES_COUNT) {
+      return NextResponse.json({ message: 'Demasiados mensajes en la conversación.' }, { status: 400 });
+    }
 
     const claudeMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
     for (const msg of messages) {
+      // Validate each message structure
+      if (!isValidMessage(msg)) continue;
+
       if (msg.role === 'user' || msg.role === 'assistant') {
         if (claudeMessages.length === 0 && msg.role === 'assistant') continue;
         if (claudeMessages.length > 0 && claudeMessages[claudeMessages.length - 1].role === msg.role) continue;
-        claudeMessages.push({ role: msg.role, content: msg.content });
+
+        // Sanitize message content
+        const sanitizedContent = sanitizeInput(msg.content);
+        if (!sanitizedContent) continue;
+
+        claudeMessages.push({
+          role: msg.role as 'user' | 'assistant',
+          content: sanitizedContent
+        });
       }
     }
 

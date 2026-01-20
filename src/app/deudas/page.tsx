@@ -1,18 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { CreditCard, TrendingDown, Target, AlertTriangle, CheckCircle2, Flame } from 'lucide-react';
 import { subscribeToDeudas, calcularTotalesFromDeudas } from '@/lib/firestore';
-import { deudasIniciales } from '@/lib/data';
+import { deudasIniciales, calcularProyeccionDeudas } from '@/lib/data';
+import { formatMoney } from '@/lib/utils';
 import { Deuda } from '@/types';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
 
 export default function DeudasPage() {
   const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
@@ -37,6 +30,13 @@ export default function DeudasPage() {
   const deudasOrdenadas = [...deudas].sort((a, b) => a.prioridad - b.prioridad);
   const deudasActivas = deudasOrdenadas.filter(d => !d.liquidada);
   const deudasLiquidadas = deudasOrdenadas.filter(d => d.liquidada);
+
+  // Calcular fecha de libertad dinámica
+  const fechaLibertad = useMemo(() => {
+    const proyeccion = calcularProyeccionDeudas(deudas, 0);
+    const fecha = new Date(proyeccion.fechaLibertad + '-01');
+    return fecha.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+  }, [deudas]);
 
   return (
     <div className="space-y-6">
@@ -248,7 +248,7 @@ export default function DeudasPage() {
       {/* Motivational Footer */}
       <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl text-center">
         <p className="text-purple-300">
-          Meta: Ser libres de deuda en Diciembre 2026
+          Meta: Ser libres de deuda en {fechaLibertad}
         </p>
       </div>
     </div>

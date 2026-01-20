@@ -1,19 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Mountain, Flag, Sparkles, TrendingUp, Calendar } from 'lucide-react';
 import { subscribeToDeudas, calcularTotalesFromDeudas } from '@/lib/firestore';
 import { Deuda } from '@/types';
-import { deudasIniciales } from '@/lib/data';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { deudasIniciales, calcularProyeccionDeudas } from '@/lib/data';
+import { formatMoney } from '@/lib/utils';
 
 // Animated counter component
 function AnimatedCounter({ value, duration = 2000 }: { value: number; duration?: number }) {
@@ -72,19 +64,24 @@ export default function ProgressHeroCard() {
   const totales = calcularTotalesFromDeudas(deudas);
   const porcentaje = totales.porcentajePagado;
 
-  // Calculate months remaining (assuming $38,450/month payment)
-  const pagoMensual = 38450;
-  const mesesRestantes = Math.ceil(totales.deudaTotal / pagoMensual);
+  // Proyección real con intereses compuestos
+  const proyeccion = useMemo(() => {
+    if (deudas.length === 0) return calcularProyeccionDeudas(deudasIniciales, 0);
+    return calcularProyeccionDeudas(deudas, 0);
+  }, [deudas]);
 
-  // Target date
-  const fechaLibertad = new Date();
-  fechaLibertad.setMonth(fechaLibertad.getMonth() + mesesRestantes);
-  const mesLibertad = fechaLibertad.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+  const mesesRestantes = proyeccion.mesesParaLibertad;
 
-  // Days to freedom
+  // Fecha de libertad calculada dinámicamente
+  const fechaLibertadDate = useMemo(() => {
+    return new Date(proyeccion.fechaLibertad + '-01');
+  }, [proyeccion.fechaLibertad]);
+
+  const mesLibertad = fechaLibertadDate.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+
+  // Days to freedom - calculado dinámicamente desde la proyección
   const hoy = new Date();
-  const metaDiciembre2026 = new Date(2026, 11, 31);
-  const diasParaLibertad = Math.ceil((metaDiciembre2026.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+  const diasParaLibertad = Math.ceil((fechaLibertadDate.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 
   // Milestone messages based on progress
   const getMilestoneMessage = (pct: number) => {
@@ -184,7 +181,7 @@ export default function ProgressHeroCard() {
           </div>
           <div className="text-center p-4 bg-white/5 rounded-xl">
             <p className="text-xs text-white/40 mb-1">Meta</p>
-            <p className="text-lg font-bold text-pink-400">Dic 2026</p>
+            <p className="text-lg font-bold text-pink-400">{fechaLibertadDate.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}</p>
           </div>
         </div>
 

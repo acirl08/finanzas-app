@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { categoriaLabels } from '@/lib/data';
+import { formatMoney } from '@/lib/utils';
+import TouchFriendlyChart from './TouchFriendlyChart';
 
 interface GastoData {
   categoria: string;
@@ -22,14 +24,6 @@ const ALL_COLORS = [
   '#EAB308', '#22C55E', '#14B8A6', '#3B82F6',
   '#6366F1', '#8B5CF6'
 ];
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
 
 export default function GastosPieChart() {
   const [gastosPorCategoria, setGastosPorCategoria] = useState<GastoData[]>([]);
@@ -115,12 +109,14 @@ export default function GastosPieChart() {
 
   return (
     <div className="glass-card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Gastos por Categoría</h3>
-        <span className="text-sm text-white/50">Este mes</span>
-      </div>
-
-      <div className="h-64">
+      <TouchFriendlyChart
+        title="Gastos por Categoría"
+        description="Este mes"
+        data={gastosPorCategoria}
+        dataKeyLabel="monto"
+        valueFormatter={formatMoney}
+        height={250}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -144,7 +140,7 @@ export default function GastosPieChart() {
             <Tooltip content={<CustomTooltip />} />
           </PieChart>
         </ResponsiveContainer>
-      </div>
+      </TouchFriendlyChart>
 
       {/* Legend */}
       <div className="mt-4 grid grid-cols-2 gap-2">

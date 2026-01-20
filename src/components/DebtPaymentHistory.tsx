@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { History, CreditCard, TrendingDown, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { deudasIniciales } from '@/lib/data';
+import { formatMoney } from '@/lib/utils';
 
 interface Pago {
   id: string;
@@ -12,14 +13,6 @@ interface Pago {
   fecha: string;
   saldoAnterior: number;
   saldoNuevo: number;
-}
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-  }).format(amount);
 }
 
 function formatDate(dateStr: string) {

@@ -38,26 +38,18 @@ import {
 } from 'recharts';
 import { subscribeToGastos, Gasto, subscribeToDeudas, calcularTotalesFromDeudas, initializeFirestoreData, updateGasto, deleteGasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE, deudasIniciales, presupuestosPersonales, VALES_DESPENSA, categoriaLabels, categorias } from '@/lib/data';
+import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { Deuda } from '@/types';
 import Link from 'next/link';
 import PaymentReminders from './PaymentReminders';
 import PWAWidget from './PWAWidget';
-
-// ============ HELPERS ============
-function formatMoney(amount: number, decimals = 0) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(amount);
-}
-
-function formatCompactMoney(amount: number) {
-  if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
-  if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
-  return formatMoney(amount);
-}
+import QuickAdd from './QuickAdd';
+import WeeklyBudget from './WeeklyBudget';
+import HeroMetric from './HeroMetric';
+import CategoryBudgets from './CategoryBudgets';
+import MonthComparison from './MonthComparison';
+import CoupleAlerts from './CoupleAlerts';
+import { formatMoney, formatMoneyCompact as formatCompactMoney } from '@/lib/utils';
 
 // Traffic light status
 type StatusType = 'green' | 'yellow' | 'red';
@@ -136,18 +128,16 @@ export default function ProfessionalDashboard() {
   // Establecer mounted después del primer render para evitar errores de hidratación
   useEffect(() => {
     setMounted(true);
-    // Cargar secciones colapsadas del localStorage
-    const savedCollapsed = localStorage.getItem('dashboard-collapsed-sections');
-    if (savedCollapsed) {
-      setCollapsedSections(JSON.parse(savedCollapsed));
-    }
+    // Cargar secciones colapsadas del localStorage (con manejo seguro)
+    const savedCollapsed = safeGetJSON<Record<string, boolean>>('dashboard-collapsed-sections', {});
+    setCollapsedSections(savedCollapsed);
   }, []);
 
   // Toggle para colapsar/expandir secciones
   const toggleSection = (section: string) => {
     const newCollapsed = { ...collapsedSections, [section]: !collapsedSections[section] };
     setCollapsedSections(newCollapsed);
-    localStorage.setItem('dashboard-collapsed-sections', JSON.stringify(newCollapsed));
+    safeSetJSON('dashboard-collapsed-sections', newCollapsed);
   };
 
   // Initialize Firebase data if empty, then load charts
@@ -254,6 +244,11 @@ export default function ProfessionalDashboard() {
     const presupuestoRestante = PRESUPUESTO_VARIABLE - totalGastadoMes;
     const disponibleVales = VALES_DESPENSA - totalGastadoVales;
 
+    // Cálculos para el día de hoy
+    const gastosHoy = gastosVariablesDelMes.filter((g) => g.fecha === hoy);
+    const totalGastadoHoy = gastosHoy.reduce((sum, g) => sum + g.monto, 0);
+    const presupuestoDiario = Math.max(0, Math.floor(presupuestoRestante / daysRemaining));
+
     return {
       gastosDelMes,
       gastosVariablesDelMes,
@@ -266,8 +261,10 @@ export default function ProfessionalDashboard() {
       porcentajePorTitular,
       gastosListaPorTitular,
       gastosPorCategoriaPorTitular,
+      totalGastadoHoy,
+      presupuestoDiario,
     };
-  }, [gastos, mesActual]);
+  }, [gastos, mesActual, hoy, daysRemaining]);
 
   const deudaCalculations = useMemo(() => {
     const totalesDeuda = calcularTotalesFromDeudas(deudas);
@@ -409,10 +406,12 @@ export default function ProfessionalDashboard() {
     if (!editingGasto?.id) return;
     setSavingEdit(true);
     try {
+      const montoNum = Number(editForm.monto);
+      const montoFinal = !isNaN(montoNum) && montoNum > 0 ? montoNum : editingGasto.monto;
       await updateGasto(editingGasto.id, {
         categoria: editForm.categoria,
         titular: editForm.titular as 'alejandra' | 'ricardo' | 'compartido',
-        monto: parseFloat(editForm.monto) || editingGasto.monto,
+        monto: montoFinal,
         descripcion: editForm.descripcion,
       });
       cancelEdit();
@@ -459,6 +458,18 @@ export default function ProfessionalDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* ============ HERO METRIC - La métrica más importante ============ */}
+      <HeroMetric />
+
+      {/* ============ QUICK ADD + WEEKLY BUDGET ============ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* QuickAdd - Registro rápido */}
+        <QuickAdd defaultTitular="alejandra" />
+
+        {/* WeeklyBudget - Presupuesto semanal */}
+        <WeeklyBudget />
+      </div>
+
       {/* ============ ROW 1: DEUDA + VALES ============ */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Card 1: Deuda Total */}
@@ -889,6 +900,15 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
       )}
+
+      {/* ============ COUPLE ALERTS ============ */}
+      <CoupleAlerts />
+
+      {/* ============ CATEGORY BUDGETS + MONTH COMPARISON ============ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <CategoryBudgets />
+        <MonthComparison />
+      </div>
 
       {/* ============ ROW 2: CHART CARDS ============ */}
       <div>

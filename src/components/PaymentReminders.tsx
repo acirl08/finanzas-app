@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Bell, BellRing, Calendar, CreditCard, AlertTriangle, Check, X, DollarSign } from 'lucide-react';
 import { deudasIniciales } from '@/lib/data';
 import { registrarPagoDeuda } from '@/lib/firestore';
+import { safeGetJSON, safeSetJSON } from '@/lib/storage';
+import { formatMoney } from '@/lib/utils';
 
 interface Reminder {
   id: string;
@@ -21,14 +23,6 @@ interface PagoForm {
   deudaNombre: string;
   monto: string;
   fecha: string;
-}
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-  }).format(amount);
 }
 
 // Fechas de vencimiento aproximadas por tarjeta (día del mes)
@@ -55,20 +49,16 @@ export default function PaymentReminders() {
   useEffect(() => {
     setMounted(true);
 
-    // Cargar dismissed del localStorage
-    const savedDismissed = localStorage.getItem('dismissed-reminders');
-    if (savedDismissed) {
-      const parsed = JSON.parse(savedDismissed);
-      // Solo mantener los del mes actual
-      const mesActual = new Date().toISOString().slice(0, 7);
-      const filtrados = parsed.filter((d: string) => d.startsWith(mesActual));
-      setDismissed(filtrados);
-    }
-
     // Generar recordatorios
     const hoy = new Date();
     const diaActual = hoy.getDate();
     const mesActual = hoy.toISOString().slice(0, 7);
+
+    // Cargar dismissed del localStorage (con manejo seguro)
+    const savedDismissed = safeGetJSON<string[]>('dismissed-reminders', []);
+    // Solo mantener los del mes actual
+    const filtrados = savedDismissed.filter((d: string) => d.startsWith(mesActual));
+    setDismissed(filtrados);
 
     const nuevosReminders: Reminder[] = deudasIniciales
       .filter(d => !d.liquidada)
@@ -104,7 +94,7 @@ export default function PaymentReminders() {
   const dismissReminder = (id: string) => {
     const newDismissed = [...dismissed, id];
     setDismissed(newDismissed);
-    localStorage.setItem('dismissed-reminders', JSON.stringify(newDismissed));
+    safeSetJSON('dismissed-reminders', newDismissed);
   };
 
   const openPagoForm = (reminder: Reminder) => {
@@ -121,8 +111,8 @@ export default function PaymentReminders() {
     if (!pagoForm) return;
     setSaving(true);
     try {
-      const monto = parseFloat(pagoForm.monto);
-      if (monto > 0) {
+      const monto = Number(pagoForm.monto);
+      if (!isNaN(monto) && monto > 0) {
         await registrarPagoDeuda(pagoForm.deudaId, monto, `Pago del ${pagoForm.fecha}`);
       }
       dismissReminder(pagoForm.reminderId);

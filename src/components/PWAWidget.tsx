@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Smartphone, Download, X, Check, Bell, Home } from 'lucide-react';
+import { safeGetItem, safeSetItem } from '@/lib/storage';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -27,8 +28,8 @@ export default function PWAWidget() {
       (window.navigator as any).standalone === true;
     setIsInstalled(isStandalone);
 
-    // Verificar si ya fue descartado
-    const wasDismissed = localStorage.getItem('pwa-widget-dismissed');
+    // Verificar si ya fue descartado (con manejo seguro)
+    const wasDismissed = safeGetItem('pwa-widget-dismissed');
     if (wasDismissed) {
       const dismissedDate = new Date(wasDismissed);
       const daysSince = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -63,7 +64,7 @@ export default function PWAWidget() {
 
   const handleDismiss = () => {
     setDismissed(true);
-    localStorage.setItem('pwa-widget-dismissed', new Date().toISOString());
+    safeSetItem('pwa-widget-dismissed', new Date().toISOString());
   };
 
   // No mostrar si no está montado, ya está instalada o fue descartada

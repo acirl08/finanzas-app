@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   HelpCircle,
   ChevronDown,
@@ -12,16 +12,8 @@ import {
   TrendingDown,
   Wallet
 } from 'lucide-react';
-import { deudasIniciales, calcularGastosFijos, INGRESO_MENSUAL, PRESUPUESTO_VARIABLE } from '@/lib/data';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { deudasIniciales, calcularGastosFijos, INGRESO_MENSUAL, PRESUPUESTO_VARIABLE, calcularProyeccionDeudas } from '@/lib/data';
+import { formatMoney } from '@/lib/utils';
 
 export default function PaymentPlanExplainer() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -34,6 +26,13 @@ export default function PaymentPlanExplainer() {
   // Ordenar deudas por prioridad (CAT más alto primero)
   const deudasOrdenadas = [...deudasIniciales].sort((a, b) => a.prioridad - b.prioridad);
   const deudaAtacando = deudasOrdenadas[0];
+
+  // Calcular fecha de libertad dinámica
+  const fechaLibertad = useMemo(() => {
+    const proyeccion = calcularProyeccionDeudas(deudasIniciales, 0);
+    const fecha = new Date(proyeccion.fechaLibertad + '-01');
+    return fecha.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+  }, []);
 
   return (
     <div className="glass-card">
@@ -251,7 +250,7 @@ export default function PaymentPlanExplainer() {
           {/* Footer motivacional */}
           <div className="pt-4 border-t border-white/10 text-center">
             <p className="text-xs text-white/40">
-              Siguiendo este plan, estarán libres de deuda en Diciembre 2026
+              Siguiendo este plan, estarán libres de deuda en {fechaLibertad}
             </p>
           </div>
         </div>

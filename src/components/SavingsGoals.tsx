@@ -2,15 +2,31 @@
 
 import { useState, useEffect } from 'react';
 import { Target, Plus, Trash2, Sparkles, PiggyBank } from 'lucide-react';
+import { safeGetJSON, safeSetJSON } from '@/lib/storage';
+import { formatMoney } from '@/lib/utils';
 
 interface SavingsGoal {
   id: string;
   nombre: string;
   montoObjetivo: number;
   montoActual: number;
+  ahorroMensual: number; // Cuánto ahorrar al mes para esta meta
   fechaCreacion: string;
   fechaMeta?: string;
   color: string;
+}
+
+// Función exportada para obtener el total de ahorro mensual
+export function getTotalAhorroMensual(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const saved = localStorage.getItem('savings-goals');
+    if (!saved) return 0;
+    const goals: SavingsGoal[] = JSON.parse(saved);
+    return goals.reduce((sum, g) => sum + (g.ahorroMensual || 0), 0);
+  } catch {
+    return 0;
+  }
 }
 
 const COLORS = [
@@ -21,49 +37,43 @@ const COLORS = [
   'from-rose-500 to-red-500',
 ];
 
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
-
 export default function SavingsGoals() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [newGoal, setNewGoal] = useState({ nombre: '', montoObjetivo: '' });
+  const [newGoal, setNewGoal] = useState({ nombre: '', montoObjetivo: '', ahorroMensual: '' });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // Cargar metas del localStorage
-    const saved = localStorage.getItem('savings-goals');
-    if (saved) {
-      setGoals(JSON.parse(saved));
-    }
+    // Cargar metas del localStorage (con manejo seguro)
+    const saved = safeGetJSON<SavingsGoal[]>('savings-goals', []);
+    setGoals(saved);
   }, []);
 
   const saveGoals = (newGoals: SavingsGoal[]) => {
     setGoals(newGoals);
-    localStorage.setItem('savings-goals', JSON.stringify(newGoals));
+    safeSetJSON('savings-goals', newGoals);
   };
 
   const addGoal = () => {
-    if (!newGoal.nombre || !newGoal.montoObjetivo) return;
+    if (!newGoal.nombre || !newGoal.montoObjetivo || !newGoal.ahorroMensual) return;
 
     const goal: SavingsGoal = {
       id: Date.now().toString(),
       nombre: newGoal.nombre,
       montoObjetivo: parseInt(newGoal.montoObjetivo),
       montoActual: 0,
+      ahorroMensual: parseInt(newGoal.ahorroMensual),
       fechaCreacion: new Date().toISOString().split('T')[0],
       color: COLORS[goals.length % COLORS.length],
     };
 
     saveGoals([...goals, goal]);
-    setNewGoal({ nombre: '', montoObjetivo: '' });
+    setNewGoal({ nombre: '', montoObjetivo: '', ahorroMensual: '' });
     setShowForm(false);
+
+    // Disparar evento para que otros componentes se actualicen
+    window.dispatchEvent(new CustomEvent('savings-goals-updated'));
   };
 
   const updateGoalAmount = (id: string, delta: number) => {
@@ -79,6 +89,8 @@ export default function SavingsGoals() {
 
   const deleteGoal = (id: string) => {
     saveGoals(goals.filter(g => g.id !== id));
+    // Disparar evento para que otros componentes se actualicen
+    window.dispatchEvent(new CustomEvent('savings-goals-updated'));
   };
 
   if (!mounted) {
@@ -116,29 +128,43 @@ export default function SavingsGoals() {
         <div className="mb-4 p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
           <input
             type="text"
-            placeholder="Nombre de la meta"
+            placeholder="Nombre de la meta (ej: Edinburgo)"
             value={newGoal.nombre}
             onChange={(e) => setNewGoal({ ...newGoal, nombre: e.target.value })}
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500/50"
           />
-          <div className="flex gap-2">
-            <div className="relative flex-1">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">$</span>
               <input
                 type="number"
-                placeholder="Monto objetivo"
+                placeholder="Meta total"
                 value={newGoal.montoObjetivo}
                 onChange={(e) => setNewGoal({ ...newGoal, montoObjetivo: e.target.value })}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-8 py-2 text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500/50"
               />
             </div>
-            <button
-              onClick={addGoal}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white font-medium hover:opacity-90"
-            >
-              Crear
-            </button>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">$</span>
+              <input
+                type="number"
+                placeholder="Ahorro/mes"
+                value={newGoal.ahorroMensual}
+                onChange={(e) => setNewGoal({ ...newGoal, ahorroMensual: e.target.value })}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-8 py-2 text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500/50"
+              />
+            </div>
           </div>
+          <p className="text-xs text-white/40">
+            El ahorro mensual se descontará de tu presupuesto disponible
+          </p>
+          <button
+            onClick={addGoal}
+            disabled={!newGoal.nombre || !newGoal.montoObjetivo || !newGoal.ahorroMensual}
+            className="w-full px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Crear Meta
+          </button>
         </div>
       )}
 
@@ -177,6 +203,11 @@ export default function SavingsGoals() {
                     <p className="text-xs text-white/50 mt-0.5">
                       {formatMoney(goal.montoActual)} de {formatMoney(goal.montoObjetivo)}
                     </p>
+                    {goal.ahorroMensual > 0 && (
+                      <p className="text-xs text-amber-400/70 mt-0.5">
+                        Ahorrando {formatMoney(goal.ahorroMensual)}/mes
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => deleteGoal(goal.id)}
@@ -230,11 +261,19 @@ export default function SavingsGoals() {
 
       {/* Total ahorrado */}
       {goals.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-white/10 flex justify-between">
-          <span className="text-white/70">Total ahorrado</span>
-          <span className="text-amber-400 font-semibold">
-            {formatMoney(goals.reduce((sum, g) => sum + g.montoActual, 0))}
-          </span>
+        <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+          <div className="flex justify-between">
+            <span className="text-white/70">Total ahorrado</span>
+            <span className="text-amber-400 font-semibold">
+              {formatMoney(goals.reduce((sum, g) => sum + g.montoActual, 0))}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/50 text-sm">Apartando mensualmente</span>
+            <span className="text-amber-400/70 text-sm font-medium">
+              {formatMoney(goals.reduce((sum, g) => sum + (g.ahorroMensual || 0), 0))}/mes
+            </span>
+          </div>
         </div>
       )}
     </div>

@@ -1,21 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { AlertTriangle, X, Phone, List, Target, Pause, TrendingDown } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { AlertTriangle, X, List, Target, Pause, TrendingDown } from 'lucide-react';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE } from '@/lib/data';
+import { formatMoney } from '@/lib/utils';
 
 interface BudgetAlertBannerProps {
   onDismiss?: () => void;
-}
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 export default function BudgetAlertBanner({ onDismiss }: BudgetAlertBannerProps) {
@@ -31,32 +23,34 @@ export default function BudgetAlertBanner({ onDismiss }: BudgetAlertBannerProps)
     return () => unsubscribe();
   }, []);
 
-  // Get current month gastos
-  const today = new Date();
-  const mesActual = today.toISOString().slice(0, 7);
-  const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
+  // Memoized calculations
+  const alertData = useMemo(() => {
+    const today = new Date();
+    const mesActual = today.toISOString().slice(0, 7);
+    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-  // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
-  const gastosVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
-  const totalGastado = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
+    // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
+    const gastosVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+    const totalGastado = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
 
-  // Calculate percentage
-  const porcentaje = (totalGastado / PRESUPUESTO_VARIABLE) * 100;
+    // Calculate percentage
+    const porcentaje = (totalGastado / PRESUPUESTO_VARIABLE) * 100;
 
-  // Days remaining
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  // Ensure at least 1 day remaining to avoid division by zero
-  const daysRemaining = Math.max(1, daysInMonth - today.getDate());
+    // Days remaining (including today)
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const dayOfMonth = today.getDate();
+    const daysRemaining = Math.max(1, daysInMonth - dayOfMonth + 1);
 
-  // Determine alert level
-  const getAlertLevel = () => {
-    if (porcentaje >= 100) return 'critical';
-    if (porcentaje >= 90) return 'danger';
-    if (porcentaje >= 70) return 'warning';
-    return null;
-  };
+    // Determine alert level
+    let alertLevel: 'critical' | 'danger' | 'warning' | null = null;
+    if (porcentaje >= 100) alertLevel = 'critical';
+    else if (porcentaje >= 90) alertLevel = 'danger';
+    else if (porcentaje >= 70) alertLevel = 'warning';
 
-  const alertLevel = getAlertLevel();
+    return { totalGastado, porcentaje, daysRemaining, alertLevel };
+  }, [gastos]);
+
+  const { totalGastado, porcentaje, daysRemaining, alertLevel } = alertData;
 
   // Don't show if dismissed, loading, or no alert needed
   if (dismissed || loading || !alertLevel) return null;

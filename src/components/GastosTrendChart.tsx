@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { formatMoney } from '@/lib/utils';
+import TouchFriendlyChart from './TouchFriendlyChart';
 
 interface MonthData {
   mes: string;
@@ -10,14 +12,6 @@ interface MonthData {
   vales: number;
   fijo: number;
   total: number;
-}
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-  }).format(amount);
 }
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -123,17 +117,25 @@ export default function GastosTrendChart() {
 
   return (
     <div className="glass-card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Tendencia de Gastos</h3>
-        <span className="text-sm text-white/50">Últimos 6 meses</span>
-      </div>
-
       {!hasData ? (
-        <div className="h-48 flex items-center justify-center text-white/50">
-          Aún no hay suficientes datos para mostrar tendencias
-        </div>
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Tendencia de Gastos</h3>
+            <span className="text-sm text-white/50">Últimos 6 meses</span>
+          </div>
+          <div className="h-48 flex items-center justify-center text-white/50">
+            Aún no hay suficientes datos para mostrar tendencias
+          </div>
+        </>
       ) : (
-        <div className="h-64">
+        <TouchFriendlyChart
+          title="Tendencia de Gastos"
+          description="Últimos 6 meses"
+          data={monthlyData}
+          dataKeyLabel="total"
+          valueFormatter={formatMoney}
+          height={250}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
@@ -153,7 +155,7 @@ export default function GastosTrendChart() {
               <Bar dataKey="fijo" name="Fijo" stackId="a" fill="#6B7280" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </TouchFriendlyChart>
       )}
 
       {/* Legend */}

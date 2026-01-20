@@ -13,15 +13,7 @@ import {
   categoriasGustos,
   categoriaLabels,
 } from '@/lib/data';
-
-function formatMoney(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from '@/lib/utils';
 
 interface BudgetCardProps {
   title: string;
