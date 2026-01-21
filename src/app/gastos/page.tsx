@@ -65,8 +65,8 @@ export default function GastosPage() {
   const mesActual = today.toISOString().slice(0, 7);
   const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-  // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
-  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+  // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
+  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
 
   const gastosFiltrados = gastosVariablesDelMes
     .filter(g => filtro === 'todos' || g.titular === filtro)

@@ -43,7 +43,7 @@ export default function GastosTrendChart() {
             if (esActual) {
               const gastosDelMes = data.data.gastosMes || [];
               const variable = gastosDelMes
-                .filter((g: any) => !g.esFijo && !g.conVales)
+                .filter((g: any) => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos')
                 .reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
               const vales = gastosDelMes
                 .filter((g: any) => g.conVales)

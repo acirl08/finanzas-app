@@ -24,13 +24,13 @@ export default function RegistrarPage() {
   const mesActual = today.toISOString().slice(0, 7);
   const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-  // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
-  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+  // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
+  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
   const totalGastadoVariables = gastosVariablesDelMes.reduce((sum, g) => sum + g.monto, 0);
   const restante = PRESUPUESTO_VARIABLE - totalGastadoVariables;
   const porcentaje = Math.min((totalGastadoVariables / PRESUPUESTO_VARIABLE) * 100, 100);
 
-  // Calcular gastos por categoría (solo variables para consistencia)
+  // Calcular gastos por categoría (solo variables, sin imprevistos)
   const gastosPorCategoria = gastosVariablesDelMes.reduce((acc, g) => {
     acc[g.categoria] = (acc[g.categoria] || 0) + g.monto;
     return acc;

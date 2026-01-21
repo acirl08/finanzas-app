@@ -80,13 +80,13 @@ export default function SimpleDashboard() {
   const mesActual = today.toISOString().slice(0, 7);
   const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-  // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
-  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales);
+  // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
+  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
   const totalGastadoMes = gastosVariablesDelMes.reduce((sum, g) => sum + g.monto, 0);
 
-  // Get today's gastos (solo variables)
+  // Get today's gastos (solo variables, sin imprevistos)
   const hoy = today.toISOString().split('T')[0];
-  const gastosHoy = gastos.filter(g => g.fecha === hoy && !g.esFijo && !g.conVales);
+  const gastosHoy = gastos.filter(g => g.fecha === hoy && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
   const totalGastadoHoy = gastosHoy.reduce((sum, g) => sum + g.monto, 0);
 
   // Calculate remaining budget and daily allowance
@@ -110,8 +110,8 @@ export default function SimpleDashboard() {
   });
 
   const diasBajoPresupuesto = diasDelMes.filter(dia => {
-    // Solo contar gastos variables para la racha
-    const gastosDia = gastos.filter(g => g.fecha === dia && !g.esFijo && !g.conVales);
+    // Solo contar gastos variables para la racha (sin imprevistos)
+    const gastosDia = gastos.filter(g => g.fecha === dia && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
     const totalDia = gastosDia.reduce((sum, g) => sum + g.monto, 0);
     return totalDia <= presupuestoDiario;
   }).length;

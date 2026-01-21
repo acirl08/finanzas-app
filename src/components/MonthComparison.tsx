@@ -56,12 +56,12 @@ export default function MonthComparison() {
     const diaActual = today.getDate();
     const diasEnMesAnterior = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
 
-    // Filtrar gastos por mes (solo variables, no fijos, no vales)
+    // Filtrar gastos por mes (solo variables, no fijos, no vales, no imprevistos)
     const gastosActual = gastos.filter(g =>
-      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales
+      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
     );
     const gastosAnterior = gastos.filter(g =>
-      g.fecha.startsWith(mesAnterior) && !g.esFijo && !g.conVales
+      g.fecha.startsWith(mesAnterior) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
     );
 
     // Gastos del mes anterior hasta el mismo día (para comparación justa)

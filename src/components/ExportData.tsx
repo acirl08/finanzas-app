@@ -74,8 +74,9 @@ export default function ExportData({ className = '' }: ExportDataProps) {
       // Totales
       const totalMes = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
       const totalFijos = gastosDelMes.filter(g => g.esFijo).reduce((sum, g) => sum + g.monto, 0);
-      const totalVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales).reduce((sum, g) => sum + g.monto, 0);
+      const totalVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos').reduce((sum, g) => sum + g.monto, 0);
       const totalVales = gastosDelMes.filter(g => g.conVales).reduce((sum, g) => sum + g.monto, 0);
+      const totalImprevistos = gastosDelMes.filter(g => g.categoria === 'imprevistos').reduce((sum, g) => sum + g.monto, 0);
 
       // Add summary rows
       rows.push([]);
@@ -84,11 +85,12 @@ export default function ExportData({ className = '' }: ExportDataProps) {
       rows.push(['Total fijos', '', '', '', totalFijos.toString()]);
       rows.push(['Total variables', '', '', '', totalVariables.toString()]);
       rows.push(['Total vales', '', '', '', totalVales.toString()]);
+      rows.push(['Total imprevistos', '', '', '', totalImprevistos.toString()]);
       rows.push([]);
-      rows.push(['POR TITULAR']);
-      rows.push(['Alejandra', '', '', '', gastosDelMes.filter(g => g.titular === 'alejandra' && !g.esFijo && !g.conVales).reduce((sum, g) => sum + g.monto, 0).toString()]);
-      rows.push(['Ricardo', '', '', '', gastosDelMes.filter(g => g.titular === 'ricardo' && !g.esFijo && !g.conVales).reduce((sum, g) => sum + g.monto, 0).toString()]);
-      rows.push(['Compartido', '', '', '', gastosDelMes.filter(g => (g.titular === 'compartido' || !g.titular) && !g.esFijo && !g.conVales).reduce((sum, g) => sum + g.monto, 0).toString()]);
+      rows.push(['POR TITULAR (sin imprevistos)']);
+      rows.push(['Alejandra', '', '', '', gastosDelMes.filter(g => g.titular === 'alejandra' && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos').reduce((sum, g) => sum + g.monto, 0).toString()]);
+      rows.push(['Ricardo', '', '', '', gastosDelMes.filter(g => g.titular === 'ricardo' && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos').reduce((sum, g) => sum + g.monto, 0).toString()]);
+      rows.push(['Compartido', '', '', '', gastosDelMes.filter(g => (g.titular === 'compartido' || !g.titular) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos').reduce((sum, g) => sum + g.monto, 0).toString()]);
 
       // Create CSV content
       const csvContent = [headers, ...rows]
@@ -131,8 +133,9 @@ export default function ExportData({ className = '' }: ExportDataProps) {
       // Calcular totales
       const totalMes = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
       const totalFijos = gastosDelMes.filter(g => g.esFijo).reduce((sum, g) => sum + g.monto, 0);
-      const totalVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales).reduce((sum, g) => sum + g.monto, 0);
+      const totalVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos').reduce((sum, g) => sum + g.monto, 0);
       const totalVales = gastosDelMes.filter(g => g.conVales).reduce((sum, g) => sum + g.monto, 0);
+      const totalImprevistos = gastosDelMes.filter(g => g.categoria === 'imprevistos').reduce((sum, g) => sum + g.monto, 0);
 
       // Por categoría
       const porCategoria: Record<string, number> = {};
@@ -141,11 +144,11 @@ export default function ExportData({ className = '' }: ExportDataProps) {
         porCategoria[cat] = (porCategoria[cat] || 0) + g.monto;
       });
 
-      // Por titular
+      // Por titular (sin imprevistos)
       const porTitular = {
-        alejandra: gastosDelMes.filter(g => g.titular === 'alejandra' && !g.esFijo && !g.conVales).reduce((sum, g) => sum + g.monto, 0),
-        ricardo: gastosDelMes.filter(g => g.titular === 'ricardo' && !g.esFijo && !g.conVales).reduce((sum, g) => sum + g.monto, 0),
-        compartido: gastosDelMes.filter(g => (g.titular === 'compartido' || !g.titular) && !g.esFijo && !g.conVales).reduce((sum, g) => sum + g.monto, 0),
+        alejandra: gastosDelMes.filter(g => g.titular === 'alejandra' && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos').reduce((sum, g) => sum + g.monto, 0),
+        ricardo: gastosDelMes.filter(g => g.titular === 'ricardo' && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos').reduce((sum, g) => sum + g.monto, 0),
+        compartido: gastosDelMes.filter(g => (g.titular === 'compartido' || !g.titular) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos').reduce((sum, g) => sum + g.monto, 0),
       };
 
       // Estado de deudas

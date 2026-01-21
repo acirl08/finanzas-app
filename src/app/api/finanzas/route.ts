@@ -56,10 +56,12 @@ export async function GET() {
     // Separar gastos por tipo
     const gastosFijos = gastosMes.filter((g: any) => g.esFijo === true);
     const gastosConVales = gastosMes.filter((g: any) => g.conVales === true && g.esFijo !== true);
-    const gastosVariables = gastosMes.filter((g: any) => g.esFijo !== true && g.conVales !== true);
+    const gastosImprevistos = gastosMes.filter((g: any) => g.categoria === 'imprevistos');
+    const gastosVariables = gastosMes.filter((g: any) => g.esFijo !== true && g.conVales !== true && g.categoria !== 'imprevistos');
 
     const totalGastosFijos = gastosFijos.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
     const totalGastosConVales = gastosConVales.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
+    const totalGastosImprevistos = gastosImprevistos.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
     const totalGastosVariables = gastosVariables.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
     const totalGastadoMes = totalGastosFijos + totalGastosConVales + totalGastosVariables;
     const deudaTotal = deudas.reduce((sum: number, d: any) => sum + (d.saldoActual || 0), 0);
@@ -610,7 +612,7 @@ export async function POST(request: Request) {
           const mesActual = new Date().toISOString().slice(0, 7);
           const gastosDelMes = gastosSnapshot.docs
             .map(doc => doc.data())
-            .filter((g: any) => g.fecha?.startsWith(mesActual) && !g.esFijo);
+            .filter((g: any) => g.fecha?.startsWith(mesActual) && !g.esFijo && g.categoria !== 'imprevistos');
 
           const totalGastosMes = gastosDelMes.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
           const deudaTotal = deudasIniciales.reduce((sum, d) => sum + d.saldoActual, 0);
@@ -656,9 +658,9 @@ export async function POST(request: Request) {
 
           const todosGastos = gastosSnapshot.docs.map(doc => doc.data());
 
-          // Gastos del mes actual (SOLO variables, sin fijos como renta)
-          const gastosActual = todosGastos.filter((g: any) => g.fecha?.startsWith(mesActual) && !g.esFijo);
-          const gastosAnterior = todosGastos.filter((g: any) => g.fecha?.startsWith(mesAnteriorStr) && !g.esFijo);
+          // Gastos del mes actual (SOLO variables, sin fijos ni imprevistos)
+          const gastosActual = todosGastos.filter((g: any) => g.fecha?.startsWith(mesActual) && !g.esFijo && g.categoria !== 'imprevistos');
+          const gastosAnterior = todosGastos.filter((g: any) => g.fecha?.startsWith(mesAnteriorStr) && !g.esFijo && g.categoria !== 'imprevistos');
 
           // Totales (solo gastos variables)
           const totalActual = gastosActual.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
@@ -765,7 +767,7 @@ export async function POST(request: Request) {
             fecha.setMonth(hoy.getMonth() - i);
             const mesStr = fecha.toISOString().slice(0, 7);
             const totalMes = todosGastos
-              .filter((g: any) => g.fecha?.startsWith(mesStr) && !g.esFijo)
+              .filter((g: any) => g.fecha?.startsWith(mesStr) && !g.esFijo && g.categoria !== 'imprevistos')
               .reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
             ultimos3Meses.push(totalMes);
           }
