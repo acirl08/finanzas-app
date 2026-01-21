@@ -80,9 +80,9 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
     const diasEnMes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const porcentajeMes = (diaActual / diasEnMes) * 100;
 
-    // Filtrar gastos del mes (solo variables)
+    // Filtrar gastos del mes (solo variables, sin imprevistos)
     const gastosDelMes = gastos.filter(g =>
-      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales
+      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
     );
 
     // Gastos por titular
