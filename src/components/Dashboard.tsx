@@ -28,6 +28,7 @@ import FutureSelfCard from './FutureSelfCard';
 import CelebrationModal from './CelebrationModal';
 import PaymentPlanExplainer from './PaymentPlanExplainer';
 import BudgetOverview from './BudgetOverview';
+import ResumenGlobal from './ResumenGlobal';
 
 // Animated number component with counting effect
 function AnimatedNumber({ value, duration = 1500, prefix = '', suffix = '', className = '' }: {
@@ -414,6 +415,9 @@ export default function Dashboard() {
 
       {/* Budget Overview - Vales, Esenciales, Gustos */}
       <BudgetOverview />
+
+      {/* Resumen Global - Quién paga qué */}
+      <ResumenGlobal />
 
       {/* Payment Plan Explainer - Responde la pregunta "¿Cómo funciona?" */}
       <PaymentPlanExplainer />
