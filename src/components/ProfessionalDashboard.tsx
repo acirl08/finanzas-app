@@ -180,15 +180,15 @@ export default function ProfessionalDashboard() {
     // Todos los gastos del mes (para mostrar en distribución)
     const gastosDelMes = gastos.filter((g) => g.fecha.startsWith(mesActual));
 
-    // Solo gastos VARIABLES (no fijos, no vales) afectan el presupuesto de $15,000
-    const gastosVariablesDelMes = gastosDelMes.filter((g) => !g.esFijo && !g.conVales);
+    // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
+    const gastosVariablesDelMes = gastosDelMes.filter((g) => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
     const totalGastadoMes = gastosVariablesDelMes.reduce((sum, g) => sum + g.monto, 0);
 
     // Gastos con vales del mes
     const gastosValesDelMes = gastosDelMes.filter((g) => g.conVales && !g.esFijo);
     const totalGastadoVales = gastosValesDelMes.reduce((sum, g) => sum + g.monto, 0);
 
-    // Gastos por titular (solo variables, no fijos, no vales)
+    // Gastos por titular (solo variables, no fijos, no vales, no imprevistos)
     const gastosAlejandra = gastosVariablesDelMes.filter((g) => g.titular === 'alejandra');
     const gastosRicardo = gastosVariablesDelMes.filter((g) => g.titular === 'ricardo');
     const gastosCompartido = gastosVariablesDelMes.filter((g) => g.titular === 'compartido' || !g.titular);
@@ -281,8 +281,8 @@ export default function ProfessionalDashboard() {
     for (let i = 0; i < dayOfMonth; i++) {
       const fecha = new Date(today.getFullYear(), today.getMonth(), dayOfMonth - i);
       const fechaStr = fecha.toISOString().split('T')[0];
-      // Solo contar gastos variables (no fijos, no vales)
-      const gastosDia = gastos.filter((g) => g.fecha === fechaStr && !g.esFijo && !g.conVales);
+      // Solo contar gastos variables (no fijos, no vales, no imprevistos)
+      const gastosDia = gastos.filter((g) => g.fecha === fechaStr && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
       const totalDia = gastosDia.reduce((sum, g) => sum + g.monto, 0);
       if (totalDia <= presupuestoDiarioIdeal) count++;
       else break;
