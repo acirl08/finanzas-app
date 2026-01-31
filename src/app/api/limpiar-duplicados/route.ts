@@ -65,9 +65,19 @@ export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const key = searchParams.get('key');
+    const eliminarId = searchParams.get('eliminarId');
 
     if (key !== 'limpiar2026') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    // Si se proporciona un ID específico, eliminar solo ese gasto
+    if (eliminarId) {
+      await deleteDoc(doc(db, 'gastos', eliminarId));
+      return NextResponse.json({
+        success: true,
+        mensaje: `Gasto ${eliminarId} eliminado`
+      });
     }
 
     const gastosRef = collection(db, 'gastos');
