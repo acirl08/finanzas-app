@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  PawPrint,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -75,6 +76,7 @@ const categoriaIconos: Record<string, React.ReactNode> = {
   salud: <Heart className="w-4 h-4" />,
   ropa: <Shirt className="w-4 h-4" />,
   entretenimiento: <Film className="w-4 h-4" />,
+  mascotas: <PawPrint className="w-4 h-4" />,
 };
 
 // ============ MINI SPARKLINE ============

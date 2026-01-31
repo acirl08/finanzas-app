@@ -180,6 +180,7 @@ export const categoriasEsenciales = [
   'salud',           // Medicinas, doctor, dentista
   'hogar',           // Cosas para la casa (limpieza, etc.)
   'transporte',      // Uber, estacionamiento
+  'mascotas',        // Comida y cuidado de mascotas
   'imprevistos',     // Emergencias
 ];
 
@@ -203,6 +204,7 @@ export const categorias = [
   'salud',
   'hogar',
   'transporte',
+  'mascotas',
   'imprevistos',
   // Gustos
   'restaurantes',
@@ -221,6 +223,7 @@ export const categoriaLabels: Record<string, string> = {
   salud: 'Salud',
   hogar: 'Hogar',
   transporte: 'Transporte',
+  mascotas: 'Mascotas',
   imprevistos: 'Imprevistos',
   restaurantes: 'Restaurantes',
   entretenimiento: 'Entretenimiento',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Shield, Plus, AlertTriangle, TrendingDown, History, Settings2, ChevronDown, ChevronUp, X, Check } from 'lucide-react';
+import { Shield, Plus, AlertTriangle, TrendingDown, History, Settings2, ChevronDown, ChevronUp, X, Check, ArrowRight } from 'lucide-react';
 import { subscribeToGastos, Gasto, addGasto } from '@/lib/firestore';
 import { PRESUPUESTO_IMPREVISTOS, categoriaLabels } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
@@ -18,6 +18,7 @@ export default function EmergencyFund({ compact = false, className = '' }: Emerg
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [newGasto, setNewGasto] = useState({ monto: '', descripcion: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -113,32 +114,132 @@ export default function EmergencyFund({ compact = false, className = '' }: Emerg
   // Compact version for dashboard
   if (compact) {
     return (
-      <div className={`p-4 rounded-2xl bg-gradient-to-br ${config.bg} border ${config.border} ${className}`}>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Shield className={`w-5 h-5 ${config.text}`} />
-            <span className="text-sm font-medium text-white">Imprevistos</span>
+      <>
+        <button
+          onClick={() => setShowModal(true)}
+          className={`metric-card hover-lift relative overflow-hidden ${config.bg} ${config.border} border text-left w-full cursor-pointer transition-transform hover:scale-[1.02] ${className}`}
+        >
+          <div className="metric-card-header">
+            <div className="metric-card-title">
+              <div className={`w-2 h-2 rounded-full ${status === 'healthy' ? 'bg-emerald-500' : status === 'warning' ? 'bg-amber-500' : 'bg-red-500'}`} />
+              <span className={config.text}>Imprevistos</span>
+            </div>
+            <div className={`badge ${status === 'healthy' ? 'badge-success' : status === 'warning' ? 'badge-warning' : 'badge-danger'}`}>
+              {config.label}
+            </div>
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full ${config.bg} ${config.text}`}>
-            {config.label}
-          </span>
-        </div>
-        <p className={`text-2xl font-bold ${config.text}`}>
-          {formatMoney(disponible)}
-        </p>
-        <div className="h-1.5 bg-black/20 rounded-full mt-2 overflow-hidden">
-          <div
-            className={`h-full rounded-full ${
-              status === 'healthy' ? 'bg-emerald-500' :
-              status === 'warning' ? 'bg-amber-500' : 'bg-red-500'
-            }`}
-            style={{ width: `${Math.min(porcentaje, 100)}%` }}
-          />
-        </div>
-        <p className="text-xs text-white/50 mt-1">
-          {formatMoney(totalUsado)} de {formatMoney(PRESUPUESTO_IMPREVISTOS)} usado
-        </p>
-      </div>
+          <div className="metric-card-subtitle">
+            Gastado: {formatMoney(totalUsado)} de {formatMoney(PRESUPUESTO_IMPREVISTOS)}
+          </div>
+          <div className={`text-4xl font-black tracking-tight ${disponible >= 0 ? 'text-white' : 'text-red-400'}`}>
+            {formatMoney(disponible)}
+          </div>
+          <div className="mt-4">
+            <div className="progress-bar-bg">
+              <div
+                className={`progress-bar-fill ${status === 'healthy' ? 'progress-green' : status === 'warning' ? 'progress-purple' : 'progress-red'}`}
+                style={{ width: `${Math.min(porcentaje, 100)}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-2 text-xs text-[var(--text-tertiary)]">
+              <span>{Math.round(porcentaje)}% usado</span>
+              <span className="flex items-center gap-1">Ver desglose <ArrowRight className="w-3 h-3" /></span>
+            </div>
+          </div>
+        </button>
+
+        {/* Modal para ver detalle de imprevistos */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4" onClick={() => setShowModal(false)}>
+            <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] sm:max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Fondo de Imprevistos</h3>
+                  <p className="text-sm text-white/50">
+                    {formatMoney(totalUsado)} de {formatMoney(PRESUPUESTO_IMPREVISTOS)} usado
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white/60" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 overflow-y-auto flex-1">
+                {/* Status card */}
+                <div className={`p-4 rounded-xl bg-gradient-to-br ${config.bg} border ${config.border} mb-4`}>
+                  <div className="text-center">
+                    <p className="text-white/60 text-sm mb-1">Disponible este mes</p>
+                    <p className={`text-3xl font-black ${disponible >= 0 ? config.text : 'text-red-400'}`}>
+                      {formatMoney(disponible)}
+                    </p>
+                    {disponible < 0 && (
+                      <p className="text-red-400 text-sm mt-1">
+                        Excedido por {formatMoney(Math.abs(disponible))}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Lista de gastos */}
+                <h4 className="text-sm font-medium text-white/70 mb-3">Detalle de gastos ({gastosImprevistos.length})</h4>
+                <div className="space-y-2">
+                  {gastosImprevistos.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Shield className="w-12 h-12 text-emerald-400/30 mx-auto mb-3" />
+                      <p className="text-white/50">Sin gastos imprevistos este mes</p>
+                      <p className="text-white/30 text-sm mt-1">Esperemos que siga así</p>
+                    </div>
+                  ) : (
+                    gastosImprevistos.map((gasto, idx) => (
+                      <div key={gasto.id || idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{gasto.descripcion || 'Gasto imprevisto'}</p>
+                          <p className="text-xs text-white/40">
+                            {new Date(gasto.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                            {gasto.titular && gasto.titular !== 'compartido' && ` • ${gasto.titular}`}
+                          </p>
+                        </div>
+                        <span className="text-sm font-medium text-red-400 ml-2">
+                          -{formatMoney(gasto.monto)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-blue-300">
+                      Este fondo es para emergencias reales: reparaciones, médico, etc.
+                      No lo uses para gastos normales.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-white/10 flex justify-between items-center">
+                <span className="text-sm text-white/50">
+                  {Math.round(porcentaje)}% del presupuesto usado
+                </span>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg text-white text-sm font-medium transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
