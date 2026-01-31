@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   HelpCircle,
   ChevronDown,
@@ -13,15 +13,29 @@ import {
   Wallet
 } from 'lucide-react';
 import { deudasIniciales, calcularGastosFijos, INGRESO_MENSUAL, PRESUPUESTO_VARIABLE, calcularProyeccionDeudas } from '@/lib/data';
+import { subscribeToIngresos, Ingreso } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 
 export default function PaymentPlanExplainer() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'resumen' | 'detalle'>('resumen');
+  const [ingresos, setIngresos] = useState<Ingreso[]>([]);
+
+  useEffect(() => {
+    const unsub = subscribeToIngresos(setIngresos);
+    return () => unsub();
+  }, []);
+
+  // Calcular ingreso mensual real
+  const ingresoMensual = useMemo(() => {
+    const mesActual = new Date().toISOString().slice(0, 7);
+    const total = ingresos.filter(i => i.fecha.startsWith(mesActual)).reduce((sum, i) => sum + i.monto, 0);
+    return total > 0 ? total : INGRESO_MENSUAL;
+  }, [ingresos]);
 
   const gastosFijos = calcularGastosFijos();
   const pagosMinimos = deudasIniciales.reduce((sum, d) => sum + d.pagoMinimo, 0);
-  const disponibleParaAtacar = INGRESO_MENSUAL - gastosFijos - pagosMinimos - PRESUPUESTO_VARIABLE;
+  const disponibleParaAtacar = ingresoMensual - gastosFijos - pagosMinimos - PRESUPUESTO_VARIABLE;
 
   // Ordenar deudas por prioridad (CAT más alto primero)
   const deudasOrdenadas = [...deudasIniciales].sort((a, b) => a.prioridad - b.prioridad);

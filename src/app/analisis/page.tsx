@@ -25,7 +25,7 @@ import {
   gastosFijos,
   suscripciones
 } from '@/lib/data';
-import { subscribeToDeudas, calcularTotalesFromDeudas } from '@/lib/firestore';
+import { subscribeToDeudas, subscribeToIngresos, calcularTotalesFromDeudas, Ingreso } from '@/lib/firestore';
 import { Deuda } from '@/types';
 import { formatMoney, MESES_CORTOS } from '@/lib/utils';
 import GastosPieChart from '@/components/GastosPieChart';
@@ -41,12 +41,13 @@ import SmartAlerts from '@/components/SmartAlerts';
 export default function AnalisisPage() {
   // Estado para deudas desde Firestore
   const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
+  const [ingresos, setIngresos] = useState<Ingreso[]>([]);
   const [loading, setLoading] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);
 
-  // Suscribirse a deudas de Firestore
+  // Suscribirse a deudas e ingresos de Firestore
   useEffect(() => {
-    const unsubscribe = subscribeToDeudas((deudasActualizadas) => {
+    const unsubDeudas = subscribeToDeudas((deudasActualizadas) => {
       if (deudasActualizadas.length > 0) {
         setDeudas(deudasActualizadas);
         setUsingFallback(false);
@@ -56,8 +57,20 @@ export default function AnalisisPage() {
       }
       setLoading(false);
     });
-    return () => unsubscribe();
+    const unsubIngresos = subscribeToIngresos(setIngresos);
+    return () => {
+      unsubDeudas();
+      unsubIngresos();
+    };
   }, []);
+
+  // Calcular ingreso mensual real
+  const ingresoMensual = useMemo(() => {
+    const mesActual = new Date().toISOString().slice(0, 7);
+    const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(mesActual));
+    const total = ingresosDelMes.reduce((sum, i) => sum + i.monto, 0);
+    return total > 0 ? total : INGRESO_MENSUAL;
+  }, [ingresos]);
 
   // Calcular todos los datos dinámicamente desde deudas de Firestore
   const totales = useMemo(() => calcularTotalesFromDeudas(deudas), [deudas]);
@@ -65,9 +78,9 @@ export default function AnalisisPage() {
 
   // Calcular cuánto dinero extra hay disponible para atacar deudas
   const pagoExtraMensual = useMemo(() => {
-    const disponibleParaDeuda = INGRESO_MENSUAL - gastosFijosTotal;
+    const disponibleParaDeuda = ingresoMensual - gastosFijosTotal;
     return Math.max(0, disponibleParaDeuda - totales.pagosMinimos);
-  }, [gastosFijosTotal, totales.pagosMinimos]);
+  }, [ingresoMensual, gastosFijosTotal, totales.pagosMinimos]);
 
   // Proyección de deuda con intereses REALES (incluyendo pago extra)
   const proyeccion = useMemo(() => calcularProyeccionDeudas(deudas, pagoExtraMensual), [deudas, pagoExtraMensual]);
@@ -160,7 +173,6 @@ export default function AnalisisPage() {
 
   // Poder de pago mensual (dinámico) con desglose completo
   const poderDePagoDesglose = useMemo(() => {
-    const ingresoMensual = INGRESO_MENSUAL;
     const gastosFijos = gastosFijosTotal;
     const disponibleTotal = ingresoMensual - gastosFijos;
     const pagosMinimos = totales.pagosMinimos;
@@ -183,7 +195,7 @@ export default function AnalisisPage() {
       deudaAtacando,
       deudasActivas,
     };
-  }, [gastosFijosTotal, totales.pagosMinimos, deudas]);
+  }, [ingresoMensual, gastosFijosTotal, totales.pagosMinimos, deudas]);
 
   // Para compatibilidad con código existente
   const poderDePago = poderDePagoDesglose.disponibleTotal;
@@ -506,7 +518,7 @@ export default function AnalisisPage() {
             </div>
             <div className="p-4 bg-white/5 rounded-xl">
               <p className="text-xs text-white/40 mb-1">Ingreso</p>
-              <p className="text-2xl font-bold text-green-400">{formatMoney(INGRESO_MENSUAL)}</p>
+              <p className="text-2xl font-bold text-green-400">{formatMoney(ingresoMensual)}</p>
               <p className="text-xs text-white/40">mensual</p>
             </div>
           </div>

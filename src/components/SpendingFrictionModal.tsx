@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AlertTriangle, Clock, X, Briefcase, Calendar, Target } from 'lucide-react';
 import { INGRESO_MENSUAL, deudasIniciales, calcularProyeccionDeudas, calcularTotales } from '@/lib/data';
+import { subscribeToIngresos, Ingreso } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 
 interface SpendingFrictionModalProps {
@@ -48,6 +49,19 @@ export default function SpendingFrictionModal({
 }: SpendingFrictionModalProps) {
   const [countdown, setCountdown] = useState(10);
   const [canConfirm, setCanConfirm] = useState(false);
+  const [ingresos, setIngresos] = useState<Ingreso[]>([]);
+
+  useEffect(() => {
+    const unsub = subscribeToIngresos(setIngresos);
+    return () => unsub();
+  }, []);
+
+  // Calcular ingreso mensual real
+  const ingresoMensual = useMemo(() => {
+    const mesActual = new Date().toISOString().slice(0, 7);
+    const total = ingresos.filter(i => i.fecha.startsWith(mesActual)).reduce((sum, i) => sum + i.monto, 0);
+    return total > 0 ? total : INGRESO_MENSUAL;
+  }, [ingresos]);
 
   // Check if this is an essential category (no friction needed)
   const isEssential = ESSENTIAL_CATEGORIES.includes(categoria.toLowerCase());
@@ -59,7 +73,7 @@ export default function SpendingFrictionModal({
     const pagoMensualDeuda = totalesDeudas.pagosMinimos;
 
     const DIAS_POR_MES = 30;
-    const INGRESO_DIARIO = INGRESO_MENSUAL / DIAS_POR_MES;
+    const INGRESO_DIARIO = ingresoMensual / DIAS_POR_MES;
     const HORAS_TRABAJO_DIA = 8;
     const PAGO_POR_HORA = INGRESO_DIARIO / HORAS_TRABAJO_DIA;
 
@@ -72,7 +86,7 @@ export default function SpendingFrictionModal({
     const excede = quedaDespues < 0;
 
     return { diasRetraso, horasTrabajo, disponibleHoy, porcentajeDelDia, quedaDespues, excede };
-  }, [monto, presupuestoDiario, gastadoHoy]);
+  }, [monto, presupuestoDiario, gastadoHoy, ingresoMensual]);
 
   const { diasRetraso, horasTrabajo, disponibleHoy, porcentajeDelDia, quedaDespues, excede } = impactData;
 
