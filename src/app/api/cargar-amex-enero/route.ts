@@ -22,7 +22,7 @@ const gastosAmex = [
   // 17 enero
   { fecha: '2026-01-17', monto: 491.00, categoria: 'imprevistos', descripcion: 'City Market Gomez Morin', titular: 'ricardo' },
   { fecha: '2026-01-17', monto: 104.00, categoria: 'imprevistos', descripcion: 'City Market Gomez Morin', titular: 'ricardo' },
-  { fecha: '2026-01-17', monto: 334.00, categoria: 'restaurantes', descripcion: 'Carls Jr Gonzalitos', titular: 'ricardo' },
+  { fecha: '2026-01-17', monto: 334.00, categoria: 'restaurantes', descripcion: 'Carls Jr Gonzalitos', titular: 'compartido' },
 
   // 21 enero
   { fecha: '2026-01-21', monto: 2277.00, categoria: 'restaurantes', descripcion: 'Mia Italia', titular: 'compartido' },
