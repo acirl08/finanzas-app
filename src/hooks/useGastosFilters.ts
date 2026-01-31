@@ -5,8 +5,11 @@ import { Gasto } from '@/lib/firestore';
 import {
   PRESUPUESTO_VARIABLE,
   PRESUPUESTO_IMPREVISTOS,
+  PRESUPUESTO_GUSTOS,
   VALES_DESPENSA,
-  presupuestosPersonales
+  presupuestosPersonales,
+  categoriasEsenciales,
+  categoriasVales
 } from '@/lib/data';
 
 /**
@@ -33,6 +36,28 @@ export function filtrarGastosDelMes(gastos: Gasto[], mes?: string): Gasto[] {
 // Filtrar gastos variables (no fijos, no vales, no imprevistos)
 export function filtrarGastosVariables(gastos: Gasto[]): Gasto[] {
   return gastos.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
+}
+
+// Filtrar gastos esenciales (salud, transporte, hogar, gasolina, super sin vales)
+export function filtrarGastosEsenciales(gastos: Gasto[]): Gasto[] {
+  return gastos.filter(g =>
+    !g.esFijo &&
+    !g.conVales &&
+    g.categoria !== 'imprevistos' &&
+    (categoriasEsenciales.includes(g.categoria) || categoriasVales.includes(g.categoria))
+  );
+}
+
+// Filtrar gastos de gustos (restaurantes, entretenimiento, personal, etc.)
+// Estos son los que cuentan contra el presupuesto personal de cada quien
+export function filtrarGastosGustos(gastos: Gasto[]): Gasto[] {
+  return gastos.filter(g =>
+    !g.esFijo &&
+    !g.conVales &&
+    g.categoria !== 'imprevistos' &&
+    !categoriasEsenciales.includes(g.categoria) &&
+    !categoriasVales.includes(g.categoria)
+  );
 }
 
 // Filtrar gastos con vales
@@ -150,15 +175,18 @@ export function useGastosDelMes(gastos: Gasto[], mes?: string) {
 
 /**
  * Hook para calcular gastos por titular
+ * IMPORTANTE: Solo cuenta GUSTOS (restaurantes, entretenimiento, personal, etc.)
+ * NO cuenta esenciales (salud, transporte, hogar, super sin vales)
  */
 export function useGastosPorTitular(gastos: Gasto[], mes?: string) {
   return useMemo(() => {
     const mesTarget = mes || getMesActual();
     const gastosDelMes = filtrarGastosDelMes(gastos, mesTarget);
-    const gastosVariables = filtrarGastosVariables(gastosDelMes);
+    // Usar gastosGustos, NO gastosVariables - solo gustos cuentan contra presupuesto personal
+    const gastosGustos = filtrarGastosGustos(gastosDelMes);
 
     const calcularPorTitular = (titular: 'alejandra' | 'ricardo' | 'compartido') => {
-      const gastosTitular = filtrarPorTitular(gastosVariables, titular);
+      const gastosTitular = filtrarPorTitular(gastosGustos, titular);
       const total = calcularTotal(gastosTitular);
       const presupuesto = presupuestosPersonales[titular];
       const disponible = presupuesto - total;
