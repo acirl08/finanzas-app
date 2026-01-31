@@ -242,7 +242,8 @@ export const categoriasEsenciales = [
   'hogar',           // Cosas para la casa (limpieza, etc.)
   'transporte',      // Uber, estacionamiento
   'mascotas',        // Comida y cuidado de mascotas
-  'imprevistos',     // Emergencias
+  'imprevistos',     // Emergencias REALES (médico urgente, reparación, etc.)
+  'no_planificado',  // Gastos que no estaban presupuestados pero no son emergencias
   'trabajo',         // Herramientas de trabajo (Supabase, AWS, etc.)
 ];
 
@@ -270,6 +271,7 @@ export const categorias = [
   'transporte',
   'mascotas',
   'imprevistos',
+  'no_planificado',
   'trabajo',
   // Gustos
   'restaurantes',
@@ -293,7 +295,8 @@ export const categoriaLabels: Record<string, string> = {
   hogar: 'Hogar',
   transporte: 'Transporte',
   mascotas: 'Mascotas',
-  imprevistos: 'Imprevistos',
+  imprevistos: 'Imprevistos (Emergencias)',
+  no_planificado: 'No Planificado',
   trabajo: 'Trabajo',
   restaurantes: 'Restaurantes',
   entretenimiento: 'Entretenimiento',
