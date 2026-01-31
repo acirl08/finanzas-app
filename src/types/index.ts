@@ -54,3 +54,22 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
 }
+
+export interface Ingreso {
+  id: string;
+  fecha: string;
+  monto: number;
+  cuenta: string;
+  descripcion: string;
+  tipo: 'nomina' | 'transferencia' | 'cashback' | 'reembolso' | 'otro';
+  titular: 'alejandra' | 'ricardo' | 'compartido';
+}
+
+export interface CuentaBanco {
+  id: string;
+  nombre: string;
+  tipo: 'debito' | 'credito';
+  titular: 'alejandra' | 'ricardo';
+  saldoActual: number;
+  ultimaActualizacion: string;
+}

@@ -329,3 +329,45 @@ export function calcularTotalesFromDeudas(deudas: Deuda[]) {
     deudaPagada: deudaInicial - deudaTotal,
   };
 }
+
+// ============ INGRESOS ============
+
+const INGRESOS_COLLECTION = 'ingresos';
+
+export interface Ingreso {
+  id?: string;
+  fecha: string;
+  monto: number;
+  cuenta: string;
+  tipo: 'nomina' | 'transferencia' | 'cashback' | 'reembolso' | 'otro';
+  descripcion: string;
+  titular: 'alejandra' | 'ricardo';
+  createdAt?: Timestamp;
+}
+
+export function subscribeToIngresos(callback: (ingresos: Ingreso[]) => void, onError?: (error: Error) => void) {
+  return onSnapshot(
+    query(collection(db, INGRESOS_COLLECTION), orderBy('fecha', 'desc')),
+    (snapshot) => {
+      const ingresos = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Ingreso[];
+      callback(ingresos);
+    },
+    (error) => {
+      console.error('Error subscribing to ingresos:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+export async function addIngreso(ingreso: Omit<Ingreso, 'id' | 'createdAt'>) {
+  const docRef = await withTimeout(
+    addDoc(collection(db, INGRESOS_COLLECTION), {
+      ...ingreso,
+      createdAt: Timestamp.now()
+    })
+  );
+  return docRef.id;
+}

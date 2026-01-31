@@ -25,6 +25,7 @@ import {
   ChevronUp,
   Info,
   PawPrint,
+  HelpCircle,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -53,6 +54,8 @@ import MonthComparison from './MonthComparison';
 import UnifiedAlerts from './UnifiedAlerts';
 import EmergencyFund from './EmergencyFund';
 import FinancialAdvisor from './FinancialAdvisor';
+import AccountBalance from './AccountBalance';
+import UnrecognizedExpenses from './UnrecognizedExpenses';
 import { formatMoney, formatMoneyCompact as formatCompactMoney } from '@/lib/utils';
 import { metodoPagoLabels } from '@/lib/data';
 
@@ -136,6 +139,10 @@ export default function ProfessionalDashboard() {
     setMounted(true);
     // Cargar secciones colapsadas del localStorage (con manejo seguro)
     const savedCollapsed = safeGetJSON<Record<string, boolean>>('dashboard-collapsed-sections', {});
+    // Asegurar que budgets nunca esté colapsado por defecto
+    if (savedCollapsed.budgets === undefined) {
+      savedCollapsed.budgets = false;
+    }
     setCollapsedSections(savedCollapsed);
   }, []);
 
@@ -516,33 +523,44 @@ export default function ProfessionalDashboard() {
         {/* Fondo de Imprevistos - Compact */}
         <EmergencyFund compact />
 
-        {/* Racha + Días info */}
-        <div className="metric-card hover-lift">
-          <div className="metric-card-header">
-            <div className="metric-card-title">
-              <div className="w-2 h-2 rounded-full bg-orange-500" />
-              <span>Racha</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
-              <Clock className="w-3 h-3" />
-              <span>{daysRemaining} días restantes</span>
-            </div>
-          </div>
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-4xl font-black tracking-tight text-orange-400">
-                {racha} <span className="text-lg font-medium text-[var(--text-tertiary)]">días</span>
+        {/* Gastos No Reconocidos */}
+        {(() => {
+          const gastosNoReconocidos = gastos.filter(g => g.categoria === 'no_reconocido' && g.fecha.startsWith(mesActual));
+          const totalNoReconocido = gastosNoReconocidos.reduce((sum, g) => sum + g.monto, 0);
+          const cantidadNoReconocidos = gastosNoReconocidos.length;
+
+          return (
+            <div className={`metric-card hover-lift ${cantidadNoReconocidos > 0 ? 'border-amber-500/30' : ''}`}>
+              <div className="metric-card-header">
+                <div className="metric-card-title">
+                  <div className={`w-2 h-2 rounded-full ${cantidadNoReconocidos > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                  <span>No Reconocidos</span>
+                </div>
+                {cantidadNoReconocidos > 0 && (
+                  <div className="badge badge-warning">
+                    Pendientes
+                  </div>
+                )}
               </div>
-              <div className="text-sm text-[var(--text-tertiary)] mt-1">Récord: {rachaRecord} días</div>
+              <div className="flex items-end justify-between">
+                <div>
+                  <div className={`text-4xl font-black tracking-tight ${cantidadNoReconocidos > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {cantidadNoReconocidos}
+                  </div>
+                  <div className="text-sm text-[var(--text-tertiary)] mt-1">
+                    {cantidadNoReconocidos > 0 ? formatMoney(totalNoReconocido) + ' por identificar' : 'Todo identificado'}
+                  </div>
+                </div>
+                <HelpCircle className={`w-10 h-10 ${cantidadNoReconocidos > 0 ? 'text-amber-400/30' : 'text-emerald-400/30'}`} />
+              </div>
+              {cantidadNoReconocidos > 0 && (
+                <div className="mt-4 text-xs text-amber-400/70">
+                  Revisa abajo para identificar estos gastos
+                </div>
+              )}
             </div>
-            <Flame className="w-10 h-10 text-orange-400/30" />
-          </div>
-          <div className="mt-4 flex gap-1">
-            {Array.from({ length: 7 }, (_, i) => (
-              <div key={i} className={`flex-1 h-2 rounded-full ${i < Math.min(racha, 7) ? 'bg-gradient-to-r from-orange-500 to-amber-400' : 'bg-[var(--bg-hover)]'}`} />
-            ))}
-          </div>
-        </div>
+          );
+        })()}
       </div>
 
       {/* ============ PRESUPUESTOS POR PERSONA (Collapsible) ============ */}
@@ -889,6 +907,12 @@ export default function ProfessionalDashboard() {
 
       {/* ============ FINANCIAL ADVISOR ============ */}
       <FinancialAdvisor />
+
+      {/* ============ ACCOUNT BALANCE ============ */}
+      <AccountBalance />
+
+      {/* ============ UNRECOGNIZED EXPENSES ============ */}
+      <UnrecognizedExpenses />
 
       {/* ============ UNIFIED ALERTS ============ */}
       <UnifiedAlerts maxAlerts={4} />

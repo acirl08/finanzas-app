@@ -18,8 +18,42 @@ export const metodosPago: MetodoPago[] = [
   { id: 'rappi', label: 'Rappi', titular: 'alejandra' },
   { id: 'heb', label: 'HEB Afirme', titular: 'alejandra' },
   { id: 'santander', label: 'Santander', titular: 'alejandra' },
+  { id: 'likeu', label: 'Santander LikeU', titular: 'alejandra' },
   { id: 'efectivo', label: 'Efectivo', titular: null },
   { id: 'vales', label: 'Vales Despensa', titular: null },
+];
+
+// ============================================
+// CUENTAS DE BANCO (para balance)
+// ============================================
+export interface CuentaInfo {
+  id: string;
+  nombre: string;
+  tipo: 'debito' | 'credito';
+  titular: 'alejandra' | 'ricardo';
+  banco: string;
+}
+
+export const cuentasBanco: CuentaInfo[] = [
+  // Débito - Alejandra
+  { id: 'santander', nombre: 'Santander', tipo: 'debito', titular: 'alejandra', banco: 'Santander' },
+  // Crédito - Alejandra
+  { id: 'nu_alejandra', nombre: 'Nu Alejandra', tipo: 'credito', titular: 'alejandra', banco: 'Nu' },
+  { id: 'amex_gold', nombre: 'AMEX Gold', tipo: 'credito', titular: 'alejandra', banco: 'American Express' },
+  { id: 'rappi', nombre: 'Rappi Card', tipo: 'credito', titular: 'alejandra', banco: 'Banorte' },
+  { id: 'heb', nombre: 'HEB Afirme', tipo: 'credito', titular: 'alejandra', banco: 'Afirme' },
+  // Crédito - Ricardo
+  { id: 'bbva', nombre: 'BBVA', tipo: 'credito', titular: 'ricardo', banco: 'BBVA' },
+  { id: 'nu_ricardo', nombre: 'Nu Ricardo', tipo: 'credito', titular: 'ricardo', banco: 'Nu' },
+  { id: 'amex_platinum', nombre: 'AMEX Platinum', tipo: 'credito', titular: 'ricardo', banco: 'American Express' },
+];
+
+export const tiposIngreso = [
+  { id: 'nomina', label: 'Nómina' },
+  { id: 'transferencia', label: 'Transferencia' },
+  { id: 'cashback', label: 'Cashback' },
+  { id: 'reembolso', label: 'Reembolso' },
+  { id: 'otro', label: 'Otro' },
 ];
 
 export const metodoPagoLabels: Record<string, string> = metodosPago.reduce((acc, m) => {
@@ -209,6 +243,7 @@ export const categoriasEsenciales = [
   'transporte',      // Uber, estacionamiento
   'mascotas',        // Comida y cuidado de mascotas
   'imprevistos',     // Emergencias
+  'trabajo',         // Herramientas de trabajo (Supabase, AWS, etc.)
 ];
 
 // Categorías de GUSTOS (no esenciales)
@@ -233,13 +268,17 @@ export const categorias = [
   'transporte',
   'mascotas',
   'imprevistos',
+  'trabajo',
   // Gustos
   'restaurantes',
   'entretenimiento',
   'ropa',
   'cafe_snacks',
   'personal',
+  'suscripciones',
   'otros_gustos',
+  // Especiales
+  'no_reconocido',
 ];
 
 // Labels bonitos para mostrar
@@ -252,12 +291,15 @@ export const categoriaLabels: Record<string, string> = {
   transporte: 'Transporte',
   mascotas: 'Mascotas',
   imprevistos: 'Imprevistos',
+  trabajo: 'Trabajo',
   restaurantes: 'Restaurantes',
   entretenimiento: 'Entretenimiento',
   ropa: 'Ropa',
   cafe_snacks: 'Café / Snacks',
   personal: 'Personal',
+  suscripciones: 'Suscripciones',
   otros_gustos: 'Otros',
+  no_reconocido: 'No Reconocido',
 };
 
 // Helper para saber el tipo de categoría
