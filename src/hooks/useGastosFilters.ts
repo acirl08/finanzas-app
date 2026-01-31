@@ -50,11 +50,13 @@ export function filtrarGastosEsenciales(gastos: Gasto[]): Gasto[] {
 
 // Filtrar gastos de gustos (restaurantes, entretenimiento, personal, etc.)
 // Estos son los que cuentan contra el presupuesto personal de cada quien
+// Excluye 'no_reconocido' hasta que se identifiquen
 export function filtrarGastosGustos(gastos: Gasto[]): Gasto[] {
   return gastos.filter(g =>
     !g.esFijo &&
     !g.conVales &&
     g.categoria !== 'imprevistos' &&
+    g.categoria !== 'no_reconocido' &&
     !categoriasEsenciales.includes(g.categoria) &&
     !categoriasVales.includes(g.categoria)
   );

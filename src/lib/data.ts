@@ -253,6 +253,7 @@ export const categoriasGustos = [
   'ropa',            // Ropa y accesorios
   'cafe_snacks',     // Cafés, antojos
   'personal',        // Hobbies, belleza, etc.
+  'suscripciones',   // Netflix, Spotify, etc.
   'otros_gustos',    // Otros gustos
 ];
 

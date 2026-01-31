@@ -233,6 +233,10 @@ function AddIngresoForm({ onClose }: { onClose: () => void }) {
 
     setLoading(true);
     try {
+      // Inferir titular de la cuenta seleccionada
+      const cuentaInfo = cuentasBanco.find(c => c.id === cuenta);
+      const titular = cuentaInfo?.titular || 'alejandra';
+
       const response = await fetch('/api/ingresos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -241,6 +245,7 @@ function AddIngresoForm({ onClose }: { onClose: () => void }) {
           cuenta,
           tipo,
           descripcion: descripcion || tipo,
+          titular,
         }),
       });
 
