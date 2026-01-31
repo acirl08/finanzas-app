@@ -26,16 +26,22 @@ interface PagoForm {
 }
 
 // Fechas de vencimiento aproximadas por tarjeta (día del mes)
-const fechasVencimiento: Record<string, number> = {
-  'Rappi': 15,
-  'Nu': 20,
-  'HEB Afirme': 10,
-  'Amex Gold': 5,
-  'Amex Platinum': 5,
-  'Santander LikeU': 25,
-  'Crédito Personal': 1,
-  'BBVA': 18,
-  'Banorte/Invex': 12,
+// Algunas deudas tienen pagos quincenales
+interface FechaVencimiento {
+  dias: number[];  // Array de días del mes (ej: [1, 15] para quincenal)
+  montosPorPago?: number[];  // Montos específicos por pago (opcional)
+}
+
+const fechasVencimiento: Record<string, FechaVencimiento> = {
+  'Rappi': { dias: [15] },
+  'Nu': { dias: [20] },
+  'HEB Afirme': { dias: [10] },
+  'Amex Gold': { dias: [5] },
+  'Amex Platinum': { dias: [5] },
+  'Santander LikeU': { dias: [25] },
+  'Crédito Personal': { dias: [1, 15], montosPorPago: [3000, 3000] },  // Quincenal: $3,000 + $3,000 = $6,000
+  'BBVA': { dias: [18] },
+  'Banorte/Invex': { dias: [12] },
 };
 
 export default function PaymentReminders() {
@@ -60,28 +66,47 @@ export default function PaymentReminders() {
     const filtrados = savedDismissed.filter((d: string) => d.startsWith(mesActual));
     setDismissed(filtrados);
 
-    const nuevosReminders: Reminder[] = deudasIniciales
+    const nuevosReminders: Reminder[] = [];
+
+    deudasIniciales
       .filter(d => !d.liquidada)
-      .map(deuda => {
-        const fechaVenc = fechasVencimiento[deuda.nombre] || 15;
-        let diasRestantes = fechaVenc - diaActual;
+      .forEach(deuda => {
+        const config = fechasVencimiento[deuda.nombre] || { dias: [15] };
 
-        // Si ya pasó este mes, calcular para el próximo
-        if (diasRestantes < -5) {
-          diasRestantes = (30 - diaActual) + fechaVenc;
-        }
+        // Crear un recordatorio por cada fecha de vencimiento
+        config.dias.forEach((fechaVenc, index) => {
+          let diasRestantes = fechaVenc - diaActual;
 
-        return {
-          id: `${mesActual}-${deuda.id}`,
-          deudaId: deuda.id,
-          deudaNombre: deuda.nombre,
-          monto: deuda.pagoMinimo,
-          fechaVencimiento: fechaVenc,
-          diasRestantes,
-          urgente: diasRestantes <= 3 && diasRestantes >= -2,
-        };
-      })
-      .sort((a, b) => a.diasRestantes - b.diasRestantes);
+          // Si ya pasó este mes, calcular para el próximo
+          if (diasRestantes < -5) {
+            diasRestantes = (30 - diaActual) + fechaVenc;
+          }
+
+          // Calcular el monto para este pago específico
+          const montoPago = config.montosPorPago
+            ? config.montosPorPago[index]
+            : deuda.pagoMinimo;
+
+          // ID único que incluye el día para pagos múltiples
+          const uniqueId = config.dias.length > 1
+            ? `${mesActual}-${deuda.id}-dia${fechaVenc}`
+            : `${mesActual}-${deuda.id}`;
+
+          nuevosReminders.push({
+            id: uniqueId,
+            deudaId: deuda.id,
+            deudaNombre: config.dias.length > 1
+              ? `${deuda.nombre} (Quincena ${index + 1})`
+              : deuda.nombre,
+            monto: montoPago,
+            fechaVencimiento: fechaVenc,
+            diasRestantes,
+            urgente: diasRestantes <= 3 && diasRestantes >= -2,
+          });
+        });
+      });
+
+    nuevosReminders.sort((a, b) => a.diasRestantes - b.diasRestantes);
 
     setReminders(nuevosReminders);
   }, []);

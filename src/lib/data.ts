@@ -304,7 +304,7 @@ export const categoriaLabels: Record<string, string> = {
   cafe_snacks: 'Café / Snacks',
   personal: 'Personal',
   suscripciones: 'Suscripciones',
-  compras: 'Compras / Amazon',
+  compras: 'Compras Online',
   otros_gustos: 'Otros',
   no_reconocido: 'No Reconocido',
 };

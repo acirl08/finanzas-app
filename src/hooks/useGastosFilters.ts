@@ -227,7 +227,7 @@ export function useRacha(gastos: Gasto[]) {
       const fecha = new Date(today.getFullYear(), today.getMonth(), dayOfMonth - i);
       const fechaStr = fecha.toISOString().split('T')[0];
       const gastosDia = gastos.filter(
-        g => g.fecha === fechaStr && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
+        g => g.fecha === fechaStr && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos' && g.categoria !== 'no_reconocido'
       );
       const totalDia = calcularTotal(gastosDia);
       if (totalDia <= presupuestoDiarioIdeal) count++;

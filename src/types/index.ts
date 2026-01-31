@@ -18,8 +18,11 @@ export interface Gasto {
   descripcion: string;
   monto: number;
   titular: 'alejandra' | 'ricardo' | 'compartido';
-  tarjeta?: string;
+  esFijo?: boolean;
+  conVales?: boolean;
   metodoPago?: string;
+  planificado?: boolean;
+  tarjeta?: string;
 }
 
 export interface GastoFijo {

@@ -67,7 +67,8 @@ export function useMonth() {
 
 // Helper para formatear mes
 export function formatMonth(mes: string): string {
-  const date = new Date(mes + '-01');
+  const [year, month] = mes.split('-').map(Number);
+  const date = new Date(year, month - 1, 15); // Usar día 15 para evitar problemas de timezone
   return date.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
 }
 

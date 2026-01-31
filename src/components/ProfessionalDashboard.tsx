@@ -324,8 +324,8 @@ export default function ProfessionalDashboard() {
     for (let i = 0; i < dayOfMonth; i++) {
       const fecha = new Date(today.getFullYear(), today.getMonth(), dayOfMonth - i);
       const fechaStr = fecha.toISOString().split('T')[0];
-      // Solo contar gastos variables (no fijos, no vales, no imprevistos)
-      const gastosDia = gastos.filter((g) => g.fecha === fechaStr && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
+      // Solo contar gastos variables (no fijos, no vales, no imprevistos, no no_reconocido)
+      const gastosDia = gastos.filter((g) => g.fecha === fechaStr && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos' && g.categoria !== 'no_reconocido');
       const totalDia = gastosDia.reduce((sum, g) => sum + g.monto, 0);
       if (totalDia <= presupuestoDiarioIdeal) count++;
       else break;
@@ -348,20 +348,22 @@ export default function ProfessionalDashboard() {
     return data;
   }, [calculations.gastosVariablesDelMes, dayOfMonth, daysInMonth, today]);
 
+  // IMPORTANTE: Solo mostrar gastos VARIABLES (no fijos como renta, no vales, no imprevistos)
   const distribucionData = useMemo(() => {
     const porCategoria: Record<string, number> = {};
-    calculations.gastosDelMes.forEach((g) => {
+    // Usar gastosVariablesDelMes en vez de gastosDelMes para excluir gastos fijos
+    calculations.gastosVariablesDelMes.forEach((g) => {
       porCategoria[g.categoria] = (porCategoria[g.categoria] || 0) + g.monto;
     });
-    const labels: Record<string, string> = {
-      super: 'Super', restaurantes: 'Restaurantes', transporte: 'Transporte',
-      entretenimiento: 'Entretenimiento', salud: 'Salud', cafe_snacks: 'Café/Snacks',
-    };
     return Object.entries(porCategoria)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([cat, monto], i) => ({ name: labels[cat] || cat, value: monto, color: CHART_COLORS[i % CHART_COLORS.length] }));
-  }, [calculations.gastosDelMes]);
+      .map(([cat, monto], i) => ({
+        name: categoriaLabels[cat] || cat,
+        value: monto,
+        color: CHART_COLORS[i % CHART_COLORS.length]
+      }));
+  }, [calculations.gastosVariablesDelMes]);
 
   const deudasOrdenadas = useMemo(() =>
     [...deudas].filter((d) => !d.liquidada).sort((a, b) => a.prioridad - b.prioridad).slice(0, 5),
@@ -523,8 +525,8 @@ export default function ProfessionalDashboard() {
       {/* ============ QUICK ADD ============ */}
       <QuickAdd defaultTitular="alejandra" />
 
-      {/* ============ SECONDARY METRICS: VALES + IMPREVISTOS + RACHA ============ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* ============ SECONDARY METRICS: VALES + IMPREVISTOS + NO PLANIFICADOS + NO RECONOCIDOS ============ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Vales de Despensa */}
         <div className="metric-card hover-lift">
           <div className="metric-card-header">
@@ -555,6 +557,40 @@ export default function ProfessionalDashboard() {
         {/* Fondo de Imprevistos - Compact */}
         <EmergencyFund compact />
 
+        {/* Gastos No Planificados */}
+        {(() => {
+          const gastosNoPlanificados = gastos.filter(g => g.fecha.startsWith(mesActual) && (g as any).planificado === false);
+          const totalNoPlanificado = gastosNoPlanificados.reduce((sum, g) => sum + g.monto, 0);
+          const cantidadNoPlanificados = gastosNoPlanificados.length;
+
+          return (
+            <div className={`metric-card hover-lift ${cantidadNoPlanificados > 0 ? 'border-orange-500/30' : ''}`}>
+              <div className="metric-card-header">
+                <div className="metric-card-title">
+                  <div className={`w-2 h-2 rounded-full ${cantidadNoPlanificados > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
+                  <span>No Planificados</span>
+                </div>
+                {cantidadNoPlanificados > 0 && (
+                  <div className="badge bg-orange-500/20 text-orange-400 border-orange-500/30">
+                    Exceso
+                  </div>
+                )}
+              </div>
+              <div className="metric-card-subtitle">
+                {cantidadNoPlanificados > 0 ? `${cantidadNoPlanificados} gastos fuera de presupuesto` : 'Todo según el plan'}
+              </div>
+              <div className={`text-4xl font-black tracking-tight ${cantidadNoPlanificados > 0 ? 'text-orange-400' : 'text-emerald-400'}`}>
+                {cantidadNoPlanificados > 0 ? formatMoney(totalNoPlanificado) : '$0'}
+              </div>
+              {cantidadNoPlanificados > 0 && (
+                <div className="mt-4 text-xs text-orange-400/70">
+                  Gastos que no estaban presupuestados
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Gastos No Reconocidos */}
         {(() => {
           const gastosNoReconocidos = gastos.filter(g => g.categoria === 'no_reconocido' && g.fecha.startsWith(mesActual));
@@ -577,16 +613,11 @@ export default function ProfessionalDashboard() {
                   </div>
                 )}
               </div>
-              <div className="flex items-end justify-between">
-                <div>
-                  <div className={`text-4xl font-black tracking-tight ${cantidadNoReconocidos > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                    {cantidadNoReconocidos}
-                  </div>
-                  <div className="text-sm text-[var(--text-tertiary)] mt-1">
-                    {cantidadNoReconocidos > 0 ? formatMoney(totalNoReconocido) + ' por identificar' : 'Todo identificado'}
-                  </div>
-                </div>
-                <HelpCircle className={`w-10 h-10 ${cantidadNoReconocidos > 0 ? 'text-amber-400/30' : 'text-emerald-400/30'}`} />
+              <div className="metric-card-subtitle">
+                {cantidadNoReconocidos > 0 ? `${formatMoney(totalNoReconocido)} por identificar` : 'Todo identificado'}
+              </div>
+              <div className={`text-4xl font-black tracking-tight ${cantidadNoReconocidos > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {cantidadNoReconocidos}
               </div>
               {cantidadNoReconocidos > 0 && (
                 <div className="mt-4 text-xs text-amber-400/70">
@@ -948,9 +979,6 @@ export default function ProfessionalDashboard() {
 
       {/* ============ UNRECOGNIZED EXPENSES ============ */}
       <UnrecognizedExpenses />
-
-      {/* ============ UNPLANNED EXPENSES ============ */}
-      <UnplannedExpenses />
 
       {/* ============ UNIFIED ALERTS ============ */}
       <UnifiedAlerts maxAlerts={4} />
