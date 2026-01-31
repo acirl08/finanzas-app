@@ -65,9 +65,10 @@ export async function GET() {
     // Separar gastos por tipo
     const gastosFijos = gastosMes.filter((g: any) => g.esFijo === true);
 
-    // Gastos con vales (marcados explícitamente o categoría de vales)
+    // Gastos con vales (SOLO si están marcados explícitamente con conVales: true)
+    // Si olvidaron la tarjeta de vales, NO cuenta como gasto de vales
     const gastosConVales = gastosMes.filter((g: any) =>
-      g.esFijo !== true && (g.conVales === true || categoriasVales.includes(g.categoria))
+      g.esFijo !== true && g.conVales === true
     );
 
     // Imprevistos (categoría específica)
