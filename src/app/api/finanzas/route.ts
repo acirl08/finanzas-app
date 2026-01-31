@@ -84,10 +84,12 @@ export async function GET() {
     );
 
     // Gastos de gustos (restaurantes, entretenimiento, etc.) - estos SÍ cuentan contra el presupuesto de gustos ($7,000)
+    // Excluye 'no_reconocido' hasta que se identifiquen
     const gastosGustos = gastosMes.filter((g: any) =>
       g.esFijo !== true &&
       g.conVales !== true &&
       g.categoria !== 'imprevistos' &&
+      g.categoria !== 'no_reconocido' &&
       !categoriasEsenciales.includes(g.categoria) &&
       !categoriasVales.includes(g.categoria)
     );

@@ -204,10 +204,12 @@ export default function ProfessionalDashboard() {
 
     // Gastos de GUSTOS solamente (excluye esenciales como super, salud, transporte, hogar)
     // Estos son los que cuentan contra el presupuesto personal de cada quien
+    // También excluye 'no_reconocido' hasta que se identifiquen
     const gastosGustosDelMes = gastosDelMes.filter((g) =>
       !g.esFijo &&
       !g.conVales &&
       g.categoria !== 'imprevistos' &&
+      g.categoria !== 'no_reconocido' &&
       !categoriasEsenciales.includes(g.categoria) &&
       !categoriasVales.includes(g.categoria)
     );
