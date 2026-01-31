@@ -12,7 +12,18 @@ import {
   Timestamp,
   limit
 } from 'firebase/firestore';
-import { deudasIniciales, PRESUPUESTO_VARIABLE, VALES_DESPENSA, PRESUPUESTO_IMPREVISTOS, categoriasVales } from '@/lib/data';
+import {
+  deudasIniciales,
+  PRESUPUESTO_VARIABLE,
+  VALES_DESPENSA,
+  PRESUPUESTO_IMPREVISTOS,
+  PRESUPUESTO_ESENCIALES,
+  PRESUPUESTO_GUSTOS,
+  categoriasVales,
+  categoriasEsenciales,
+  categoriasGustos,
+  presupuestosPersonales
+} from '@/lib/data';
 
 // Timeout wrapper
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
@@ -53,16 +64,51 @@ export async function GET() {
 
     // Separar gastos por tipo
     const gastosFijos = gastosMes.filter((g: any) => g.esFijo === true);
-    const gastosConVales = gastosMes.filter((g: any) => g.conVales === true && g.esFijo !== true);
+
+    // Gastos con vales (marcados explícitamente o categoría de vales)
+    const gastosConVales = gastosMes.filter((g: any) =>
+      g.esFijo !== true && (g.conVales === true || categoriasVales.includes(g.categoria))
+    );
+
+    // Imprevistos (categoría específica)
     const gastosImprevistos = gastosMes.filter((g: any) => g.categoria === 'imprevistos');
-    const gastosVariables = gastosMes.filter((g: any) => g.esFijo !== true && g.conVales !== true && g.categoria !== 'imprevistos');
+
+    // Gastos esenciales (salud, transporte, hogar, gasolina, super sin vales) - NO cuentan contra presupuesto de gustos
+    // Super sin vales también es esencial (comida es necesidad)
+    const gastosEsenciales = gastosMes.filter((g: any) =>
+      g.esFijo !== true &&
+      g.conVales !== true &&
+      g.categoria !== 'imprevistos' &&
+      (categoriasEsenciales.includes(g.categoria) || categoriasVales.includes(g.categoria))
+    );
+
+    // Gastos de gustos (restaurantes, entretenimiento, etc.) - estos SÍ cuentan contra el presupuesto de gustos ($7,000)
+    const gastosGustos = gastosMes.filter((g: any) =>
+      g.esFijo !== true &&
+      g.conVales !== true &&
+      g.categoria !== 'imprevistos' &&
+      !categoriasEsenciales.includes(g.categoria) &&
+      !categoriasVales.includes(g.categoria)
+    );
+
+    // Para compatibilidad, gastosVariables = esenciales + gustos
+    const gastosVariables = [...gastosEsenciales, ...gastosGustos];
 
     const totalGastosFijos = gastosFijos.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
     const totalGastosConVales = gastosConVales.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
     const totalGastosImprevistos = gastosImprevistos.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
-    const totalGastosVariables = gastosVariables.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
+    const totalGastosEsenciales = gastosEsenciales.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
+    const totalGastosGustos = gastosGustos.reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
+    const totalGastosVariables = totalGastosEsenciales + totalGastosGustos;
     const totalGastadoMes = totalGastosFijos + totalGastosConVales + totalGastosVariables;
     const deudaTotal = deudas.reduce((sum: number, d: any) => sum + (d.saldoActual || 0), 0);
+
+    // Calcular gastos por titular (solo gustos, no esenciales)
+    const gastosPorTitular = {
+      alejandra: gastosGustos.filter((g: any) => g.titular === 'alejandra').reduce((sum: number, g: any) => sum + (g.monto || 0), 0),
+      ricardo: gastosGustos.filter((g: any) => g.titular === 'ricardo').reduce((sum: number, g: any) => sum + (g.monto || 0), 0),
+      compartido: gastosGustos.filter((g: any) => g.titular === 'compartido').reduce((sum: number, g: any) => sum + (g.monto || 0), 0),
+    };
 
     return NextResponse.json({
       success: true,
@@ -71,20 +117,37 @@ export async function GET() {
         gastosMes,
         gastosFijos,
         gastosConVales,
+        gastosEsenciales,
+        gastosGustos,
         gastosVariables,
         gastosImprevistos,
         totalGastosFijos,
         totalGastosConVales,
+        totalGastosEsenciales,
+        totalGastosGustos,
         totalGastosVariables,
         totalGastosImprevistos,
         totalGastadoMes,
         deudaTotal,
+        // Presupuestos
         presupuestoVariable: PRESUPUESTO_VARIABLE,
         presupuestoVales: VALES_DESPENSA,
+        presupuestoEsenciales: PRESUPUESTO_ESENCIALES,
+        presupuestoGustos: PRESUPUESTO_GUSTOS,
         presupuestoImprevistos: PRESUPUESTO_IMPREVISTOS,
-        disponible: PRESUPUESTO_VARIABLE - totalGastosVariables,
+        presupuestosPersonales,
+        // Disponibles
+        disponible: PRESUPUESTO_GUSTOS - totalGastosGustos, // Solo gustos contra presupuesto de gustos
         disponibleVales: VALES_DESPENSA - totalGastosConVales,
-        disponibleImprevistos: PRESUPUESTO_IMPREVISTOS - totalGastosImprevistos
+        disponibleEsenciales: PRESUPUESTO_ESENCIALES - totalGastosEsenciales,
+        disponibleImprevistos: PRESUPUESTO_IMPREVISTOS - totalGastosImprevistos,
+        // Gastos por titular (solo gustos)
+        gastosPorTitular,
+        disponiblePorTitular: {
+          alejandra: presupuestosPersonales.alejandra - gastosPorTitular.alejandra,
+          ricardo: presupuestosPersonales.ricardo - gastosPorTitular.ricardo,
+          compartido: presupuestosPersonales.compartido - gastosPorTitular.compartido,
+        }
       }
     });
   } catch (error: any) {
