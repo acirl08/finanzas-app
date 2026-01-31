@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Shield, Plus, AlertTriangle, TrendingDown, History, Settings2, ChevronDown, ChevronUp, X, Check, ArrowRight } from 'lucide-react';
-import { subscribeToGastos, Gasto, addGasto } from '@/lib/firestore';
+import { Shield, Plus, AlertTriangle, TrendingDown, History, Settings2, ChevronDown, ChevronUp, X, Check, ArrowRight, Trash2 } from 'lucide-react';
+import { subscribeToGastos, Gasto, addGasto, deleteGasto } from '@/lib/firestore';
 import { PRESUPUESTO_IMPREVISTOS, categoriaLabels } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { filtrarImprevistos, calcularTotal } from '@/hooks/useGastosFilters';
@@ -21,6 +21,7 @@ export default function EmergencyFund({ compact = false, className = '' }: Emerg
   const [showModal, setShowModal] = useState(false);
   const [newGasto, setNewGasto] = useState({ monto: '', descripcion: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribeToGastos((g) => {
@@ -104,6 +105,20 @@ export default function EmergencyFund({ compact = false, className = '' }: Emerg
       toast.error('Error al registrar');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteGasto = async (id: string) => {
+    if (!id) return;
+    setDeletingId(id);
+    try {
+      await deleteGasto(id);
+      toast.success('Gasto eliminado');
+    } catch (error) {
+      console.error('Error deleting gasto:', error);
+      toast.error('Error al eliminar');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -204,9 +219,25 @@ export default function EmergencyFund({ compact = false, className = '' }: Emerg
                             {gasto.titular && gasto.titular !== 'compartido' && ` • ${gasto.titular}`}
                           </p>
                         </div>
-                        <span className="text-sm font-medium text-red-400 ml-2">
-                          -{formatMoney(gasto.monto)}
-                        </span>
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className="text-sm font-medium text-red-400">
+                            -{formatMoney(gasto.monto)}
+                          </span>
+                          {gasto.id && (
+                            <button
+                              onClick={() => handleDeleteGasto(gasto.id!)}
+                              disabled={deletingId === gasto.id}
+                              className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-white/40 hover:text-red-400 disabled:opacity-50"
+                              title="Eliminar"
+                            >
+                              {deletingId === gasto.id ? (
+                                <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))
                   )}
@@ -388,9 +419,25 @@ export default function EmergencyFund({ compact = false, className = '' }: Emerg
                     {new Date(gasto.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
                   </p>
                 </div>
-                <span className="text-sm font-medium text-red-400">
-                  -{formatMoney(gasto.monto)}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-red-400">
+                    -{formatMoney(gasto.monto)}
+                  </span>
+                  {gasto.id && (
+                    <button
+                      onClick={() => handleDeleteGasto(gasto.id!)}
+                      disabled={deletingId === gasto.id}
+                      className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors text-white/40 hover:text-red-400 disabled:opacity-50"
+                      title="Eliminar"
+                    >
+                      {deletingId === gasto.id ? (
+                        <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           )}
