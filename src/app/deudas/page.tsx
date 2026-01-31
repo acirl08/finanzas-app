@@ -7,6 +7,7 @@ import { deudasIniciales, calcularProyeccionDeudas } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { Deuda } from '@/types';
 import DeudaEditor from '@/components/DeudaEditor';
+import DebtAdvisor from '@/components/DebtAdvisor';
 
 export default function DeudasPage() {
   const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
@@ -131,6 +132,9 @@ export default function DeudasPage() {
           <span>{formatMoney(totales.deudaTotal)} restante</span>
         </div>
       </div>
+
+      {/* Asesor de Deudas */}
+      <DebtAdvisor />
 
       {/* Deudas Activas */}
       <div className="glass-card">
