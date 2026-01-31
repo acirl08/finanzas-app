@@ -37,7 +37,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { subscribeToGastos, Gasto, subscribeToDeudas, calcularTotalesFromDeudas, initializeFirestoreData, updateGasto, deleteGasto } from '@/lib/firestore';
-import { PRESUPUESTO_VARIABLE, deudasIniciales, presupuestosPersonales, VALES_DESPENSA, categoriaLabels, categorias } from '@/lib/data';
+import { PRESUPUESTO_VARIABLE, PRESUPUESTO_GUSTOS, deudasIniciales, presupuestosPersonales, VALES_DESPENSA, categoriaLabels, categorias, categoriasEsenciales, categoriasVales } from '@/lib/data';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { Deuda } from '@/types';
 import Link from 'next/link';
@@ -190,10 +190,20 @@ export default function ProfessionalDashboard() {
     const gastosValesDelMes = gastosDelMes.filter((g) => g.conVales && !g.esFijo);
     const totalGastadoVales = gastosValesDelMes.reduce((sum, g) => sum + g.monto, 0);
 
-    // Gastos por titular (solo variables, no fijos, no vales, no imprevistos)
-    const gastosAlejandra = gastosVariablesDelMes.filter((g) => g.titular === 'alejandra');
-    const gastosRicardo = gastosVariablesDelMes.filter((g) => g.titular === 'ricardo');
-    const gastosCompartido = gastosVariablesDelMes.filter((g) => g.titular === 'compartido' || !g.titular);
+    // Gastos de GUSTOS solamente (excluye esenciales como super, salud, transporte, hogar)
+    // Estos son los que cuentan contra el presupuesto personal de cada quien
+    const gastosGustosDelMes = gastosDelMes.filter((g) =>
+      !g.esFijo &&
+      !g.conVales &&
+      g.categoria !== 'imprevistos' &&
+      !categoriasEsenciales.includes(g.categoria) &&
+      !categoriasVales.includes(g.categoria)
+    );
+
+    // Gastos por titular (SOLO GUSTOS - no esenciales)
+    const gastosAlejandra = gastosGustosDelMes.filter((g) => g.titular === 'alejandra');
+    const gastosRicardo = gastosGustosDelMes.filter((g) => g.titular === 'ricardo');
+    const gastosCompartido = gastosGustosDelMes.filter((g) => g.titular === 'compartido' || !g.titular);
 
     const gastosPorTitular = {
       alejandra: gastosAlejandra.reduce((sum, g) => sum + g.monto, 0),
