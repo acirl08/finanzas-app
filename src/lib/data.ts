@@ -254,6 +254,7 @@ export const categoriasGustos = [
   'cafe_snacks',     // Cafés, antojos
   'personal',        // Hobbies, belleza, etc.
   'suscripciones',   // Netflix, Spotify, etc.
+  'compras',         // Amazon, tiendas online
   'otros_gustos',    // Otros gustos
 ];
 
@@ -277,6 +278,7 @@ export const categorias = [
   'cafe_snacks',
   'personal',
   'suscripciones',
+  'compras',
   'otros_gustos',
   // Especiales
   'no_reconocido',
@@ -299,6 +301,7 @@ export const categoriaLabels: Record<string, string> = {
   cafe_snacks: 'Café / Snacks',
   personal: 'Personal',
   suscripciones: 'Suscripciones',
+  compras: 'Compras / Amazon',
   otros_gustos: 'Otros',
   no_reconocido: 'No Reconocido',
 };
