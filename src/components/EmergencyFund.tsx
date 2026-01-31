@@ -6,6 +6,7 @@ import { subscribeToGastos, Gasto, addGasto, deleteGasto } from '@/lib/firestore
 import { PRESUPUESTO_IMPREVISTOS, categoriaLabels } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { filtrarImprevistos, calcularTotal } from '@/hooks/useGastosFilters';
+import { useMonth } from '@/contexts/MonthContext';
 import { toast } from 'sonner';
 
 interface EmergencyFundProps {
@@ -14,6 +15,7 @@ interface EmergencyFundProps {
 }
 
 export default function EmergencyFund({ compact = false, className = '' }: EmergencyFundProps) {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
@@ -32,8 +34,7 @@ export default function EmergencyFund({ compact = false, className = '' }: Emerg
   }, []);
 
   const { gastosImprevistos, totalUsado, disponible, porcentaje, status } = useMemo(() => {
-    const mesActual = new Date().toISOString().slice(0, 7);
-    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
+    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(selectedMonth));
     const imprevistos = filtrarImprevistos(gastosDelMes);
     const total = calcularTotal(imprevistos);
     const disp = PRESUPUESTO_IMPREVISTOS - total;

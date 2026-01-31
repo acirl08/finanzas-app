@@ -6,6 +6,7 @@ import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { formatMoney } from '@/lib/utils';
 import { metodoPagoLabels } from '@/lib/data';
+import { useMonth } from '@/contexts/MonthContext';
 import { toast } from 'sonner';
 
 // Categorías simplificadas con presupuestos default sugeridos
@@ -40,6 +41,7 @@ interface CategoryBudget {
 }
 
 export default function CategoryBudgets() {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(true);
@@ -73,12 +75,9 @@ export default function CategoryBudgets() {
   }, []);
 
   const categoryData = useMemo(() => {
-    const today = new Date();
-    const mesActual = today.toISOString().slice(0, 7);
-
-    // Filtrar gastos del mes (no fijos)
+    // Filtrar gastos del mes seleccionado (no fijos)
     const gastosDelMes = gastos.filter(g =>
-      g.fecha.startsWith(mesActual) && !g.esFijo
+      g.fecha.startsWith(selectedMonth) && !g.esFijo
     );
 
     // Agrupar por categoría simplificada

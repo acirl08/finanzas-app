@@ -67,6 +67,8 @@ import AccountBalance from './AccountBalance';
 import UnrecognizedExpenses from './UnrecognizedExpenses';
 import { formatMoney, formatMoneyCompact as formatCompactMoney } from '@/lib/utils';
 import { metodoPagoLabels } from '@/lib/data';
+import { useMonth } from '@/contexts/MonthContext';
+import PreviousMonthSummary from './PreviousMonthSummary';
 
 // Traffic light status
 type StatusType = 'green' | 'yellow' | 'red';
@@ -131,6 +133,7 @@ function ChartCardSkeleton() {
 
 // ============ MAIN COMPONENT ============
 export default function ProfessionalDashboard() {
+  const { selectedMonth, isCurrentMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales); // Start with local data
   const [loadingGastos, setLoadingGastos] = useState(true);
@@ -210,7 +213,8 @@ export default function ProfessionalDashboard() {
   const dayOfMonth = today.getDate();
   // Ensure at least 1 day remaining to avoid division by zero
   const daysRemaining = Math.max(1, daysInMonth - dayOfMonth + 1);
-  const mesActual = today.toISOString().slice(0, 7);
+  // Usar el mes seleccionado del contexto
+  const mesActual = selectedMonth;
   const hoy = today.toISOString().split('T')[0];
 
   const calculations = useMemo(() => {
@@ -496,6 +500,18 @@ export default function ProfessionalDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Banner when viewing past month */}
+      {!isCurrentMonth && (
+        <div className="p-4 bg-amber-500/20 border border-amber-500/30 rounded-xl">
+          <p className="text-center text-amber-300 text-sm">
+            Estás viendo datos de un mes anterior. Los presupuestos diarios no aplican.
+          </p>
+        </div>
+      )}
+
+      {/* Resumen del mes anterior (solo visible en mes actual) */}
+      {isCurrentMonth && <PreviousMonthSummary />}
+
       {/* ============ THE 3 KEY METRICS ============ */}
       {/* 1. Disponible del Mes (HeroMetric) */}
       <HeroMetric />

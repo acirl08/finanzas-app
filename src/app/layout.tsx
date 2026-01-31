@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import FloatingChat from '@/components/FloatingChat';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Toaster } from 'sonner';
+import { MonthProvider } from '@/contexts/MonthContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -39,15 +40,16 @@ export default function RootLayout({
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       </head>
       <body className={inter.className}>
-        <div className="min-h-screen bg-[#0f0f1a]">
-          <Navbar />
-          <main className="pt-20 lg:pt-24 pb-24 lg:pb-8 px-4 lg:px-8 max-w-[1600px] mx-auto">
-            <ErrorBoundary>
-              {children}
-            </ErrorBoundary>
-          </main>
-          <FloatingChat />
-          <Toaster
+        <MonthProvider>
+          <div className="min-h-screen bg-[#0f0f1a]">
+            <Navbar />
+            <main className="pt-20 lg:pt-24 pb-24 lg:pb-8 px-4 lg:px-8 max-w-[1600px] mx-auto">
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
+            </main>
+            <FloatingChat />
+            <Toaster
             position="top-right"
             toastOptions={{
               style: {
@@ -57,8 +59,9 @@ export default function RootLayout({
               },
             }}
             richColors
-          />
-        </div>
+            />
+          </div>
+        </MonthProvider>
       </body>
     </html>
   );

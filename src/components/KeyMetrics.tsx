@@ -6,10 +6,12 @@ import { subscribeToGastos, Gasto, subscribeToDeudas, calcularTotalesFromDeudas 
 import { PRESUPUESTO_VARIABLE, deudasIniciales, calcularProyeccionDeudas } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
+import { useMonth } from '@/contexts/MonthContext';
 import { Deuda } from '@/types';
 import Link from 'next/link';
 
 export default function KeyMetrics() {
+  const { selectedMonth, isCurrentMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,7 @@ export default function KeyMetrics() {
     };
   }, []);
 
-  const gastosData = useGastosDelMes(gastos);
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
 
   const dailyBudget = useMemo(() => {
     const { totalVariables, disponibleVariables, daysRemaining, dayOfMonth, daysInMonth } = gastosData;

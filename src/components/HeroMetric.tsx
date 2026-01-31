@@ -6,8 +6,10 @@ import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
+import { useMonth } from '@/contexts/MonthContext';
 
 export default function HeroMetric() {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,8 +21,8 @@ export default function HeroMetric() {
     return () => unsubscribe();
   }, []);
 
-  // Usar hook centralizado
-  const gastosData = useGastosDelMes(gastos);
+  // Usar hook centralizado con mes seleccionado
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
 
   const data = useMemo(() => {
     const { totalVariables, disponibleVariables, porcentajeVariables, daysInMonth, dayOfMonth, daysRemaining } = gastosData;

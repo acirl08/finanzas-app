@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -12,6 +12,8 @@ import {
   X,
   Sparkles
 } from 'lucide-react';
+import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import MonthSelector from './MonthSelector';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -24,6 +26,12 @@ const navItems = [
 export default function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [gastos, setGastos] = useState<Gasto[]>([]);
+
+  useEffect(() => {
+    const unsub = subscribeToGastos(setGastos);
+    return () => unsub();
+  }, []);
 
   return (
     <>
@@ -59,12 +67,17 @@ export default function Navbar() {
             </nav>
           </div>
 
-          {/* Right Side - User Display (static, not clickable) */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center">
-              <span className="text-white font-semibold text-sm">A</span>
+          {/* Month Selector */}
+          <div className="flex items-center gap-4">
+            <MonthSelector gastos={gastos} compact />
+
+            {/* User Display */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center">
+                <span className="text-white font-semibold text-sm">A</span>
+              </div>
+              <span className="text-sm text-white/80">Ale & Ricardo</span>
             </div>
-            <span className="text-sm text-white/80">Ale & Ricardo</span>
           </div>
         </div>
       </header>
@@ -89,6 +102,10 @@ export default function Navbar() {
         {/* Mobile Menu */}
         {isOpen && (
           <nav className="border-t border-white/5 bg-[#0f0f1a] p-4">
+            {/* Month Selector for Mobile */}
+            <div className="flex justify-center mb-4 pb-4 border-b border-white/10">
+              <MonthSelector gastos={gastos} compact />
+            </div>
             <div className="space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
