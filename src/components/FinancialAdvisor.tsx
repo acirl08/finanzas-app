@@ -47,12 +47,13 @@ export default function FinancialAdvisor() {
     const today = new Date();
     const mesActual = today.toISOString().slice(0, 7);
 
-    // Filtrar gastos del mes (solo gustos, no esenciales ni vales)
+    // Filtrar gastos del mes (solo gustos, no esenciales ni vales ni no_reconocido)
     const gastosDelMes = gastos.filter(g =>
       g.fecha.startsWith(mesActual) &&
       !g.esFijo &&
       !g.conVales &&
       g.categoria !== 'imprevistos' &&
+      g.categoria !== 'no_reconocido' &&
       !categoriasEsenciales.includes(g.categoria) &&
       !categoriasVales.includes(g.categoria)
     );
