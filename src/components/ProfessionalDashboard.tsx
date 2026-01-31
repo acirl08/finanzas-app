@@ -131,6 +131,7 @@ export default function ProfessionalDashboard() {
   const [editingGasto, setEditingGasto] = useState<Gasto | null>(null);
   const [editForm, setEditForm] = useState<{ categoria: string; titular: string; monto: string; descripcion: string }>({ categoria: '', titular: '', monto: '', descripcion: '' });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [showNoReconocidos, setShowNoReconocidos] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
@@ -530,7 +531,10 @@ export default function ProfessionalDashboard() {
           const cantidadNoReconocidos = gastosNoReconocidos.length;
 
           return (
-            <div className={`metric-card hover-lift ${cantidadNoReconocidos > 0 ? 'border-amber-500/30' : ''}`}>
+            <button
+              onClick={() => cantidadNoReconocidos > 0 && setShowNoReconocidos(true)}
+              className={`metric-card hover-lift text-left w-full ${cantidadNoReconocidos > 0 ? 'border-amber-500/30 cursor-pointer' : ''}`}
+            >
               <div className="metric-card-header">
                 <div className="metric-card-title">
                   <div className={`w-2 h-2 rounded-full ${cantidadNoReconocidos > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
@@ -555,10 +559,10 @@ export default function ProfessionalDashboard() {
               </div>
               {cantidadNoReconocidos > 0 && (
                 <div className="mt-4 text-xs text-amber-400/70">
-                  Revisa abajo para identificar estos gastos
+                  Clic para ver detalles →
                 </div>
               )}
-            </div>
+            </button>
           );
         })()}
       </div>
@@ -1210,6 +1214,85 @@ export default function ProfessionalDashboard() {
       </div>
         )}
       </div>
+
+      {/* ============ MODAL: GASTOS NO RECONOCIDOS ============ */}
+      {showNoReconocidos && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-2 sm:p-4" onClick={() => setShowNoReconocidos(false)}>
+          <div className="bg-[#1a1a2e] border border-amber-500/30 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                  <HelpCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Gastos No Reconocidos</h3>
+                  <p className="text-xs text-amber-400">Identifica la categoría correcta</p>
+                </div>
+              </div>
+              <button onClick={() => setShowNoReconocidos(false)} className="p-1.5 hover:bg-white/10 rounded-lg">
+                <X className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[60vh] space-y-3">
+              {gastos.filter(g => g.categoria === 'no_reconocido' && g.fecha.startsWith(mesActual)).map(gasto => (
+                <div key={gasto.id} className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white">{gasto.descripcion}</span>
+                        <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">
+                          {metodoPagoLabels[gasto.metodoPago || ''] || gasto.metodoPago || 'N/A'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/50 mt-1">
+                        {gasto.fecha} • {gasto.titular}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-amber-400">{formatMoney(gasto.monto)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setShowNoReconocidos(false);
+                        setEditingGasto(gasto);
+                        setEditForm({
+                          categoria: gasto.categoria,
+                          titular: gasto.titular,
+                          monto: gasto.monto.toString(),
+                          descripcion: gasto.descripcion
+                        });
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg text-amber-400 text-xs font-medium transition-colors"
+                    >
+                      Editar / Identificar
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (confirm('¿Eliminar este gasto?')) {
+                          await deleteGasto(gasto.id!);
+                        }
+                      }}
+                      className="p-1.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {gastos.filter(g => g.categoria === 'no_reconocido' && g.fecha.startsWith(mesActual)).length === 0 && (
+                <div className="text-center py-8">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-400/50 mx-auto mb-3" />
+                  <p className="text-white/50">No hay gastos pendientes de identificar</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
