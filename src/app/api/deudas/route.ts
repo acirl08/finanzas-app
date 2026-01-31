@@ -36,8 +36,9 @@ export async function GET(request: Request) {
         5000
       );
       deudas = deudasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch {
+    } catch (error) {
       // Fallback a datos locales
+      console.warn('Firebase timeout in POST /api/deudas, using local fallback:', error);
     }
 
     if (deudas.length === 0) {

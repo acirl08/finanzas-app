@@ -34,7 +34,7 @@ export default function BudgetAlertBanner({ onDismiss }: BudgetAlertBannerProps)
     const totalGastado = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
 
     // Calculate percentage
-    const porcentaje = (totalGastado / PRESUPUESTO_VARIABLE) * 100;
+    const porcentaje = PRESUPUESTO_VARIABLE > 0 ? (totalGastado / PRESUPUESTO_VARIABLE) * 100 : 0;
 
     // Days remaining (including today)
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();

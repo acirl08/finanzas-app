@@ -111,7 +111,7 @@ export default function PresupuestosPersonales() {
       <div className="space-y-4">
         {presupuestos.map((p) => {
           const restante = p.presupuesto - p.gastado;
-          const porcentaje = Math.min((p.gastado / p.presupuesto) * 100, 100);
+          const porcentaje = p.presupuesto > 0 ? Math.min((p.gastado / p.presupuesto) * 100, 100) : 0;
           const excedido = p.gastado > p.presupuesto;
 
           return (

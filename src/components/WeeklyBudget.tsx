@@ -105,7 +105,7 @@ export default function WeeklyBudget() {
     const disponibleSemana = presupuestoSemanal - totalGastadoSemana;
 
     // Porcentaje usado
-    const porcentajeUsado = (totalGastadoSemana / presupuestoSemanal) * 100;
+    const porcentajeUsado = presupuestoSemanal > 0 ? (totalGastadoSemana / presupuestoSemanal) * 100 : 0;
 
     // Estado (semáforo)
     const diasRestantesSemana = diasSemana.filter(d => d.esFuturo || d.esHoy).length;

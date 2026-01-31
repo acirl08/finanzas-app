@@ -24,7 +24,8 @@ export function getTotalAhorroMensual(): number {
     if (!saved) return 0;
     const goals: SavingsGoal[] = JSON.parse(saved);
     return goals.reduce((sum, g) => sum + (g.ahorroMensual || 0), 0);
-  } catch {
+  } catch (error) {
+    console.warn('Error parsing savings goals:', error);
     return 0;
   }
 }

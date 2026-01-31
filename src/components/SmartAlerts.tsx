@@ -45,7 +45,7 @@ export default function SmartAlerts() {
           const generatedAlerts: Alert[] = [];
 
           // Alerta: Cerca del límite de presupuesto
-          const porcentajeUsado = (data.totalActual / data.presupuesto) * 100;
+          const porcentajeUsado = data.presupuesto > 0 ? (data.totalActual / data.presupuesto) * 100 : 0;
           if (porcentajeUsado >= 90) {
             generatedAlerts.push({
               id: 'budget-critical',

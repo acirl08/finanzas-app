@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rateLimit';
 import {
   collection,
   doc,
@@ -34,7 +35,24 @@ const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
 };
 
 // GET - Obtener estado actual (optimizado)
-export async function GET() {
+export async function GET(request: Request) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateLimitResult = checkRateLimit(`finanzas-get-${clientId}`, RATE_LIMITS.standard);
+
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Demasiadas solicitudes. Intenta de nuevo en un momento.' },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(rateLimitResult.resetTime),
+        },
+      }
+    );
+  }
+
   try {
     let deudas: any[] = [];
     let gastos: any[] = [];
@@ -50,8 +68,9 @@ export async function GET() {
 
       deudas = deudasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       gastos = gastosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch {
+    } catch (error) {
       // Firebase timeout - usar datos locales como fallback
+      console.warn('Firebase timeout in GET /api/finanzas, using local fallback:', error);
     }
 
     if (deudas.length === 0) {
@@ -181,6 +200,17 @@ function sanitizeString(input: unknown, maxLength = 200): string {
 
 // POST - Operaciones del chat (mantiene compatibilidad)
 export async function POST(request: Request) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateLimitResult = checkRateLimit(`finanzas-post-${clientId}`, RATE_LIMITS.standard);
+
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Demasiadas solicitudes. Intenta de nuevo en un momento.' },
+      { status: 429 }
+    );
+  }
+
   try {
     let body: unknown;
     try {

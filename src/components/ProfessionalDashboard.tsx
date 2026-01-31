@@ -39,7 +39,16 @@ import {
   Tooltip,
 } from 'recharts';
 import { subscribeToGastos, Gasto, subscribeToDeudas, calcularTotalesFromDeudas, initializeFirestoreData, updateGasto, deleteGasto } from '@/lib/firestore';
-import { PRESUPUESTO_VARIABLE, PRESUPUESTO_GUSTOS, deudasIniciales, presupuestosPersonales, VALES_DESPENSA, categoriaLabels, categorias, categoriasEsenciales, categoriasVales } from '@/lib/data';
+import { PRESUPUESTO_VARIABLE, PRESUPUESTO_GUSTOS, deudasIniciales, presupuestosPersonales, VALES_DESPENSA, categoriaLabels, categorias } from '@/lib/data';
+import {
+  filtrarGastosDelMes,
+  filtrarGastosVariables,
+  filtrarGastosGustos,
+  filtrarGastosConVales,
+  filtrarPorTitular,
+  calcularTotal,
+  useGastosPorCategoria,
+} from '@/hooks/useGastosFilters';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { Deuda } from '@/types';
 import Link from 'next/link';
@@ -163,19 +172,33 @@ export default function ProfessionalDashboard() {
 
   // Subscribe to Firebase data
   useEffect(() => {
-    const unsubGastos = subscribeToGastos((g) => {
-      setGastos(g);
-      setLoadingGastos(false);
-    });
-    const unsubDeudas = subscribeToDeudas((d) => {
-      // Only update if Firebase has data, otherwise keep local data
-      if (d && d.length > 0) {
-        setDeudas(d);
-      }
-      setLoadingDeudas(false);
-    });
+    let isMounted = true;
+
+    const unsubGastos = subscribeToGastos(
+      (g) => {
+        if (isMounted) {
+          setGastos(g);
+          setLoadingGastos(false);
+        }
+      },
+      (error) => console.error('Dashboard gastos error:', error)
+    );
+
+    const unsubDeudas = subscribeToDeudas(
+      (d) => {
+        if (isMounted) {
+          // Only update if Firebase has data, otherwise keep local data
+          if (d && d.length > 0) {
+            setDeudas(d);
+          }
+          setLoadingDeudas(false);
+        }
+      },
+      (error) => console.error('Dashboard deudas error:', error)
+    );
 
     return () => {
+      isMounted = false;
       unsubGastos();
       unsubDeudas();
     };
@@ -191,38 +214,27 @@ export default function ProfessionalDashboard() {
   const hoy = today.toISOString().split('T')[0];
 
   const calculations = useMemo(() => {
-    // Todos los gastos del mes (para mostrar en distribución)
-    const gastosDelMes = gastos.filter((g) => g.fecha.startsWith(mesActual));
-
-    // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
-    const gastosVariablesDelMes = gastosDelMes.filter((g) => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
-    const totalGastadoMes = gastosVariablesDelMes.reduce((sum, g) => sum + g.monto, 0);
+    // Usar funciones centralizadas del hook useGastosFilters
+    const gastosDelMes = filtrarGastosDelMes(gastos, mesActual);
+    const gastosVariablesDelMes = filtrarGastosVariables(gastosDelMes);
+    const totalGastadoMes = calcularTotal(gastosVariablesDelMes);
 
     // Gastos con vales del mes
-    const gastosValesDelMes = gastosDelMes.filter((g) => g.conVales && !g.esFijo);
-    const totalGastadoVales = gastosValesDelMes.reduce((sum, g) => sum + g.monto, 0);
+    const gastosValesDelMes = filtrarGastosConVales(gastosDelMes);
+    const totalGastadoVales = calcularTotal(gastosValesDelMes);
 
-    // Gastos de GUSTOS solamente (excluye esenciales como super, salud, transporte, hogar)
-    // Estos son los que cuentan contra el presupuesto personal de cada quien
-    // También excluye 'no_reconocido' hasta que se identifiquen
-    const gastosGustosDelMes = gastosDelMes.filter((g) =>
-      !g.esFijo &&
-      !g.conVales &&
-      g.categoria !== 'imprevistos' &&
-      g.categoria !== 'no_reconocido' &&
-      !categoriasEsenciales.includes(g.categoria) &&
-      !categoriasVales.includes(g.categoria)
-    );
+    // Gastos de GUSTOS solamente (excluye esenciales y no_reconocido)
+    const gastosGustosDelMes = filtrarGastosGustos(gastosDelMes);
 
     // Gastos por titular (SOLO GUSTOS - no esenciales)
-    const gastosAlejandra = gastosGustosDelMes.filter((g) => g.titular === 'alejandra');
-    const gastosRicardo = gastosGustosDelMes.filter((g) => g.titular === 'ricardo');
-    const gastosCompartido = gastosGustosDelMes.filter((g) => g.titular === 'compartido' || !g.titular);
+    const gastosAlejandra = filtrarPorTitular(gastosGustosDelMes, 'alejandra');
+    const gastosRicardo = filtrarPorTitular(gastosGustosDelMes, 'ricardo');
+    const gastosCompartido = filtrarPorTitular(gastosGustosDelMes, 'compartido');
 
     const gastosPorTitular = {
-      alejandra: gastosAlejandra.reduce((sum, g) => sum + g.monto, 0),
-      ricardo: gastosRicardo.reduce((sum, g) => sum + g.monto, 0),
-      compartido: gastosCompartido.reduce((sum, g) => sum + g.monto, 0),
+      alejandra: calcularTotal(gastosAlejandra),
+      ricardo: calcularTotal(gastosRicardo),
+      compartido: calcularTotal(gastosCompartido),
     };
 
     // Lista de gastos por titular (para el modal)
@@ -260,11 +272,11 @@ export default function ProfessionalDashboard() {
       compartido: presupuestosPersonales.compartido - gastosPorTitular.compartido,
     };
 
-    // Porcentaje usado por titular
+    // Porcentaje usado por titular (con protección contra división por cero)
     const porcentajePorTitular = {
-      alejandra: (gastosPorTitular.alejandra / presupuestosPersonales.alejandra) * 100,
-      ricardo: (gastosPorTitular.ricardo / presupuestosPersonales.ricardo) * 100,
-      compartido: (gastosPorTitular.compartido / presupuestosPersonales.compartido) * 100,
+      alejandra: presupuestosPersonales.alejandra > 0 ? (gastosPorTitular.alejandra / presupuestosPersonales.alejandra) * 100 : 0,
+      ricardo: presupuestosPersonales.ricardo > 0 ? (gastosPorTitular.ricardo / presupuestosPersonales.ricardo) * 100 : 0,
+      compartido: presupuestosPersonales.compartido > 0 ? (gastosPorTitular.compartido / presupuestosPersonales.compartido) * 100 : 0,
     };
 
     const presupuestoRestante = PRESUPUESTO_VARIABLE - totalGastadoMes;
@@ -272,7 +284,7 @@ export default function ProfessionalDashboard() {
 
     // Cálculos para el día de hoy
     const gastosHoy = gastosVariablesDelMes.filter((g) => g.fecha === hoy);
-    const totalGastadoHoy = gastosHoy.reduce((sum, g) => sum + g.monto, 0);
+    const totalGastadoHoy = calcularTotal(gastosHoy);
     const presupuestoDiario = Math.max(0, Math.floor(presupuestoRestante / daysRemaining));
 
     return {

@@ -212,7 +212,7 @@ export async function getPagos(): Promise<Pago[]> {
   })) as Pago[];
 }
 
-export function subscribeToPagos(callback: (pagos: Pago[]) => void) {
+export function subscribeToPagos(callback: (pagos: Pago[]) => void, onError?: (error: Error) => void) {
   return onSnapshot(
     query(collection(db, PAGOS_COLLECTION), orderBy('fecha', 'desc')),
     (snapshot) => {
@@ -221,6 +221,10 @@ export function subscribeToPagos(callback: (pagos: Pago[]) => void) {
         ...doc.data()
       })) as Pago[];
       callback(pagos);
+    },
+    (error) => {
+      console.error('Error subscribing to pagos:', error);
+      if (onError) onError(error);
     }
   );
 }

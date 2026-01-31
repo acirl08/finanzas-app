@@ -29,7 +29,7 @@ interface BudgetCardProps {
 
 function BudgetCard({ title, icon, presupuesto, gastado, color, bgGradient, detalles, tipo }: BudgetCardProps) {
   const restante = presupuesto - gastado;
-  const porcentaje = Math.min((gastado / presupuesto) * 100, 100);
+  const porcentaje = presupuesto > 0 ? Math.min((gastado / presupuesto) * 100, 100) : 0;
 
   const getStatus = () => {
     if (porcentaje >= 100) return { text: 'Agotado', color: 'text-red-400', bg: 'bg-red-500/20' };

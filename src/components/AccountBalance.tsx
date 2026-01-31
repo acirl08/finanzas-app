@@ -23,9 +23,19 @@ export default function AccountBalance() {
   const [showAddIngreso, setShowAddIngreso] = useState(false);
 
   useEffect(() => {
-    const unsubGastos = subscribeToGastos(setGastos);
-    const unsubIngresos = subscribeToIngresos(setIngresos);
+    let isMounted = true;
+
+    const unsubGastos = subscribeToGastos(
+      (g) => { if (isMounted) setGastos(g); },
+      (error) => console.error('AccountBalance gastos error:', error)
+    );
+    const unsubIngresos = subscribeToIngresos(
+      (i) => { if (isMounted) setIngresos(i); },
+      (error) => console.error('AccountBalance ingresos error:', error)
+    );
+
     return () => {
+      isMounted = false;
       unsubGastos();
       unsubIngresos();
     };

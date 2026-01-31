@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rateLimit';
 
 // Input validation constants
 const MAX_MESSAGE_LENGTH = 1000;
@@ -81,6 +82,17 @@ REGLAS IMPORTANTES:
 6. Sé MUY conciso. No expliques los comandos, solo úsalos.`;
 
 export async function POST(request: Request) {
+  // Rate limiting - more restrictive for Claude API calls
+  const clientId = getClientIdentifier(request);
+  const rateLimitResult = checkRateLimit(`chat-${clientId}`, RATE_LIMITS.expensive);
+
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { message: 'Demasiadas solicitudes. Espera un momento antes de intentar de nuevo.' },
+      { status: 429 }
+    );
+  }
+
   try {
     // Parse request body with validation
     let body: unknown;

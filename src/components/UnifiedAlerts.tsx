@@ -172,7 +172,7 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
     const gastosImprevistos = filtrarImprevistos(gastosData.gastosDelMes);
     const totalImprevistos = calcularTotal(gastosImprevistos);
     const disponibleImprevistos = PRESUPUESTO_IMPREVISTOS - totalImprevistos;
-    const porcentajeImprevistos = (totalImprevistos / PRESUPUESTO_IMPREVISTOS) * 100;
+    const porcentajeImprevistos = PRESUPUESTO_IMPREVISTOS > 0 ? (totalImprevistos / PRESUPUESTO_IMPREVISTOS) * 100 : 0;
 
     if (porcentajeImprevistos >= 80) {
       allAlerts.push({

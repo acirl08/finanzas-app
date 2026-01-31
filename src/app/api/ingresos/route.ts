@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rateLimit';
 import {
   collection,
   addDoc,
@@ -30,7 +31,18 @@ function sanitizeString(input: unknown, maxLength = 200): string {
 }
 
 // GET - Obtener ingresos del mes
-export async function GET() {
+export async function GET(request: Request) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateLimitResult = checkRateLimit(`ingresos-get-${clientId}`, RATE_LIMITS.standard);
+
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Demasiadas solicitudes.' },
+      { status: 429 }
+    );
+  }
+
   try {
     const ingresosSnapshot = await withTimeout(
       getDocs(query(collection(db, 'ingresos'), orderBy('fecha', 'desc'), limit(100))),
@@ -54,6 +66,17 @@ export async function GET() {
 
 // POST - Registrar nuevo ingreso
 export async function POST(request: Request) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateLimitResult = checkRateLimit(`ingresos-post-${clientId}`, RATE_LIMITS.standard);
+
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Demasiadas solicitudes.' },
+      { status: 429 }
+    );
+  }
+
   try {
     let body: unknown;
     try {

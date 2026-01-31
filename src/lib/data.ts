@@ -314,7 +314,7 @@ export function calcularTotales(deudas: Deuda[]) {
   const deudaTotal = deudas.reduce((sum, d) => sum + d.saldoActual, 0);
   const deudaInicial = deudas.reduce((sum, d) => sum + d.saldoInicial, 0);
   const pagosMinimos = deudas.filter(d => !d.liquidada).reduce((sum, d) => sum + d.pagoMinimo, 0);
-  const porcentajePagado = ((deudaInicial - deudaTotal) / deudaInicial) * 100;
+  const porcentajePagado = deudaInicial > 0 ? ((deudaInicial - deudaTotal) / deudaInicial) * 100 : 0;
 
   return {
     deudaTotal,
