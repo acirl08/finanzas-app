@@ -40,6 +40,7 @@ export interface Gasto {
   esFijo?: boolean; // true = gasto fijo (renta, luz), false/undefined = variable
   conVales?: boolean; // true = se paga con vales de despensa (super, frutas)
   metodoPago?: string; // 'bbva' | 'nu_ricardo' | 'amex_platinum' | 'efectivo' | etc.
+  planificado?: boolean; // false = gasto no estaba en presupuesto, true/undefined = planificado
   createdAt?: Timestamp;
 }
 

@@ -65,6 +65,7 @@ import EmergencyFund from './EmergencyFund';
 import FinancialAdvisor from './FinancialAdvisor';
 import AccountBalance from './AccountBalance';
 import UnrecognizedExpenses from './UnrecognizedExpenses';
+import UnplannedExpenses from './UnplannedExpenses';
 import { formatMoney, formatMoneyCompact as formatCompactMoney } from '@/lib/utils';
 import { metodoPagoLabels } from '@/lib/data';
 import { useMonth } from '@/contexts/MonthContext';
@@ -947,6 +948,9 @@ export default function ProfessionalDashboard() {
 
       {/* ============ UNRECOGNIZED EXPENSES ============ */}
       <UnrecognizedExpenses />
+
+      {/* ============ UNPLANNED EXPENSES ============ */}
+      <UnplannedExpenses />
 
       {/* ============ UNIFIED ALERTS ============ */}
       <UnifiedAlerts maxAlerts={4} />
