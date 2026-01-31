@@ -33,9 +33,9 @@ export function filtrarGastosDelMes(gastos: Gasto[], mes?: string): Gasto[] {
   return gastos.filter(g => g.fecha.startsWith(mesTarget));
 }
 
-// Filtrar gastos variables (no fijos, no vales, no imprevistos)
+// Filtrar gastos variables (no fijos, no vales, no imprevistos, no no_reconocido)
 export function filtrarGastosVariables(gastos: Gasto[]): Gasto[] {
-  return gastos.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
+  return gastos.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos' && g.categoria !== 'no_reconocido');
 }
 
 // Filtrar gastos esenciales (salud, transporte, hogar, gasolina, super sin vales)

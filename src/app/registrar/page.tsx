@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import QuickAdd from '@/components/QuickAdd';
 import GastoForm from '@/components/GastoForm';
-import { Sparkles, TrendingUp, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
-import { PRESUPUESTO_VARIABLE, categoriaLabels } from '@/lib/data';
+import { categoriaLabels } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useGastosDelMes, useGastosPorCategoria } from '@/hooks/useGastosFilters';
 
@@ -29,7 +29,6 @@ export default function RegistrarPage() {
   const today = new Date();
   const totalGastadoVariables = gastosData.totalVariables;
   const restante = gastosData.disponibleVariables;
-  const porcentaje = Math.min(gastosData.porcentajeVariables, 100);
 
   // Categorías ordenadas (top 4)
   const categoriasOrdenadas = categoriaData.slice(0, 4).map(c => [c.categoria, c.total] as [string, number]);
@@ -44,13 +43,8 @@ export default function RegistrarPage() {
     hogar: 'bg-yellow-500',
     servicios: 'bg-indigo-500',
     otros_gustos: 'bg-gray-500',
-  };
-
-  // Determinar color del progreso
-  const getProgressColor = () => {
-    if (porcentaje >= 100) return 'progress-red';
-    if (porcentaje >= 70) return 'progress-purple';
-    return 'progress-green';
+    compras: 'bg-violet-500',
+    no_reconocido: 'bg-gray-400',
   };
 
   // Tips rotativos dinámicos
@@ -131,35 +125,6 @@ export default function RegistrarPage() {
 
         {/* Tips Sidebar */}
         <div className="space-y-4">
-          {/* Meta Card - Datos reales de Firebase */}
-          <div className="glass-card-dark">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-5 h-5 text-green-400" />
-              <h3 className="font-semibold text-white">Tu meta mensual</h3>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-white/50">Gastos variables</span>
-                  <span className="text-white">
-                    {loading ? '...' : `${formatMoney(totalGastadoVariables)} / ${formatMoney(PRESUPUESTO_VARIABLE)}`}
-                  </span>
-                </div>
-                <div className="progress-bar-bg">
-                  <div
-                    className={`progress-bar-fill ${getProgressColor()}`}
-                    style={{ width: loading ? '0%' : `${porcentaje}%` }}
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-white/40">
-                {loading ? 'Cargando...' : restante >= 0
-                  ? `Te quedan ${formatMoney(restante)} para el resto del mes`
-                  : `Te pasaste por ${formatMoney(Math.abs(restante))}`
-                }
-              </p>
-            </div>
-          </div>
 
           {/* Tip Card - Rotativo */}
           <div className="glass-card">
