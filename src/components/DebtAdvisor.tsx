@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Brain, RefreshCw, Target, Lightbulb, AlertTriangle, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
-import { subscribeToDeudas, calcularTotalesFromDeudas } from '@/lib/firestore';
+import { subscribeToDeudas, subscribeToIngresos, calcularTotalesFromDeudas, Ingreso } from '@/lib/firestore';
 import { INGRESO_MENSUAL, calcularGastosFijos } from '@/lib/data';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { formatMoney } from '@/lib/utils';
@@ -19,14 +19,19 @@ interface DebtAnalysisResult {
 
 export default function DebtAdvisor() {
   const [deudas, setDeudas] = useState<Deuda[]>([]);
+  const [ingresos, setIngresos] = useState<Ingreso[]>([]);
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<DebtAnalysisResult | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub = subscribeToDeudas(setDeudas);
-    return () => unsub();
+    const unsubDeudas = subscribeToDeudas(setDeudas);
+    const unsubIngresos = subscribeToIngresos(setIngresos);
+    return () => {
+      unsubDeudas();
+      unsubIngresos();
+    };
   }, []);
 
   useEffect(() => {
@@ -39,7 +44,17 @@ export default function DebtAdvisor() {
   const debtData = useMemo(() => {
     const totales = calcularTotalesFromDeudas(deudas);
     const gastosFijos = calcularGastosFijos();
-    const disponibleParaDeudas = INGRESO_MENSUAL - gastosFijos;
+
+    // Calcular ingresos reales del mes actual
+    const mesActual = new Date().toISOString().slice(0, 7);
+    const ingresosDelMes = ingresos
+      .filter(i => i.fecha.startsWith(mesActual))
+      .reduce((sum, i) => sum + i.monto, 0);
+
+    // Usar ingresos reales si hay, sino el fijo como fallback
+    const ingresoMensual = ingresosDelMes > 0 ? ingresosDelMes : INGRESO_MENSUAL;
+
+    const disponibleParaDeudas = ingresoMensual - gastosFijos;
     const pagosMinimos = deudas.filter(d => !d.liquidada).reduce((sum, d) => sum + d.pagoMinimo, 0);
     const excedente = disponibleParaDeudas - pagosMinimos;
 
@@ -57,6 +72,7 @@ export default function DebtAdvisor() {
       deudaTotal: totales.deudaTotal,
       deudaInicial: totales.deudaInicial,
       porcentajePagado: totales.porcentajePagado,
+      ingresoMensual,
       disponibleParaDeudas,
       pagosMinimos,
       excedente,
@@ -64,7 +80,7 @@ export default function DebtAdvisor() {
       interesesMensuales,
       cantidadDeudas: deudas.filter(d => !d.liquidada).length,
     };
-  }, [deudas]);
+  }, [deudas, ingresos]);
 
   const runAnalysis = async () => {
     setLoading(true);
