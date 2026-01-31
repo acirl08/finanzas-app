@@ -19,6 +19,7 @@ export interface Gasto {
   monto: number;
   titular: 'alejandra' | 'ricardo' | 'compartido';
   tarjeta?: string;
+  metodoPago?: string;
 }
 
 export interface GastoFijo {

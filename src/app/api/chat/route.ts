@@ -43,10 +43,12 @@ CONTEXTO:
 COMANDOS (usa EXACTAMENTE este formato):
 
 REGISTRAR GASTO:
-[GASTO:monto:categoria:descripcion:titular:tipo]
+[GASTO:monto:categoria:descripcion:titular:tipo:metodoPago]
 - titular: alejandra, ricardo, o compartido
 - tipo: variable, vales, o fijo
-- Ejemplo: [GASTO:200:restaurantes:Tacos:ricardo:variable]
+- metodoPago (opcional): bbva, nu_ricardo, amex_platinum, nu_alejandra, amex_gold, rappi, heb, santander, efectivo, vales
+- Ejemplo: [GASTO:200:restaurantes:Tacos:ricardo:variable:bbva]
+- Ejemplo sin método: [GASTO:150:cafe:Starbucks:alejandra:variable]
 
 CORREGIR/BORRAR:
 [BORRAR:ultimo] - Borra el último gasto registrado

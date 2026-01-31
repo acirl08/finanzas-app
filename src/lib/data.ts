@@ -1,5 +1,32 @@
 import { Deuda, GastoFijo, Suscripcion } from '@/types';
 
+// ============================================
+// MÉTODOS DE PAGO
+// ============================================
+export interface MetodoPago {
+  id: string;
+  label: string;
+  titular: 'alejandra' | 'ricardo' | null;
+}
+
+export const metodosPago: MetodoPago[] = [
+  { id: 'bbva', label: 'BBVA', titular: 'ricardo' },
+  { id: 'nu_ricardo', label: 'Nu Ricardo', titular: 'ricardo' },
+  { id: 'amex_platinum', label: 'AMEX Platinum', titular: 'ricardo' },
+  { id: 'nu_alejandra', label: 'Nu Alejandra', titular: 'alejandra' },
+  { id: 'amex_gold', label: 'AMEX Gold', titular: 'alejandra' },
+  { id: 'rappi', label: 'Rappi', titular: 'alejandra' },
+  { id: 'heb', label: 'HEB Afirme', titular: 'alejandra' },
+  { id: 'santander', label: 'Santander', titular: 'alejandra' },
+  { id: 'efectivo', label: 'Efectivo', titular: null },
+  { id: 'vales', label: 'Vales Despensa', titular: null },
+];
+
+export const metodoPagoLabels: Record<string, string> = metodosPago.reduce((acc, m) => {
+  acc[m.id] = m.label;
+  return acc;
+}, {} as Record<string, string>);
+
 export const deudasIniciales: Deuda[] = [
   {
     id: '1',

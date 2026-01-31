@@ -39,6 +39,7 @@ export interface Gasto {
   titular: 'alejandra' | 'ricardo' | 'compartido';
   esFijo?: boolean; // true = gasto fijo (renta, luz), false/undefined = variable
   conVales?: boolean; // true = se paga con vales de despensa (super, frutas)
+  metodoPago?: string; // 'bbva' | 'nu_ricardo' | 'amex_platinum' | 'efectivo' | etc.
   createdAt?: Timestamp;
 }
 

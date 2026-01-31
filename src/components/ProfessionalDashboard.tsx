@@ -52,7 +52,9 @@ import CategoryBudgets from './CategoryBudgets';
 import MonthComparison from './MonthComparison';
 import UnifiedAlerts from './UnifiedAlerts';
 import EmergencyFund from './EmergencyFund';
+import FinancialAdvisor from './FinancialAdvisor';
 import { formatMoney, formatMoneyCompact as formatCompactMoney } from '@/lib/utils';
+import { metodoPagoLabels } from '@/lib/data';
 
 // Traffic light status
 type StatusType = 'green' | 'yellow' | 'red';
@@ -885,6 +887,9 @@ export default function ProfessionalDashboard() {
         </div>
       )}
 
+      {/* ============ FINANCIAL ADVISOR ============ */}
+      <FinancialAdvisor />
+
       {/* ============ UNIFIED ALERTS ============ */}
       <UnifiedAlerts maxAlerts={4} />
 
@@ -1081,7 +1086,10 @@ export default function ProfessionalDashboard() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-white">{gasto.descripcion || categoriaLabels[gasto.categoria] || gasto.categoria}</p>
-                      <p className="text-xs text-[var(--text-tertiary)] capitalize">{gasto.titular || 'compartido'} • {new Date(gasto.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</p>
+                      <p className="text-xs text-[var(--text-tertiary)] capitalize">
+                        {gasto.titular || 'compartido'} • {new Date(gasto.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                        {gasto.metodoPago && ` • ${metodoPagoLabels[gasto.metodoPago] || gasto.metodoPago}`}
+                      </p>
                     </div>
                   </div>
                   <span className="text-sm font-medium text-white">{formatMoney(gasto.monto)}</span>

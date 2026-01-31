@@ -203,7 +203,7 @@ export async function POST(request: Request) {
 
     switch (action) {
       case 'registrar_gasto': {
-        const { monto, categoria, descripcion, titular = 'compartido', esFijo = false, conVales = false } = params as any;
+        const { monto, categoria, descripcion, titular = 'compartido', esFijo = false, conVales = false, metodoPago } = params as any;
 
         const montoNum = Number(monto);
         if (!isValidMonto(montoNum)) {
@@ -219,7 +219,9 @@ export async function POST(request: Request) {
           ? sanitizeString(titular, 50).toLowerCase()
           : 'compartido';
 
-        const gasto = {
+        const metodoPagoSanitizado = metodoPago ? sanitizeString(metodoPago, 50).toLowerCase() : undefined;
+
+        const gasto: Record<string, any> = {
           fecha: new Date().toISOString().split('T')[0],
           monto: montoNum,
           categoria: categoriaLower,
@@ -229,6 +231,10 @@ export async function POST(request: Request) {
           conVales: esConVales,
           createdAt: Timestamp.now()
         };
+
+        if (metodoPagoSanitizado) {
+          gasto.metodoPago = metodoPagoSanitizado;
+        }
 
         try {
           await withTimeout(addDoc(collection(db, 'gastos'), gasto), 5000);

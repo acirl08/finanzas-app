@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, ShoppingCart, Utensils, Car, Heart, Sparkles, Package, Check, Settings2, AlertCircle } from 'lucide-react';
+import { Plus, ShoppingCart, Utensils, Car, Heart, Sparkles, Package, Check, Settings2, AlertCircle, CreditCard, ChevronDown } from 'lucide-react';
 import { addGasto, subscribeToGastos, Gasto } from '@/lib/firestore';
-import { PRESUPUESTO_VARIABLE } from '@/lib/data';
+import { PRESUPUESTO_VARIABLE, metodosPago } from '@/lib/data';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -29,6 +29,7 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
   const [monto, setMonto] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [titular, setTitular] = useState<'alejandra' | 'ricardo' | 'compartido'>(defaultTitular);
+  const [metodoPago, setMetodoPago] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [gastos, setGastos] = useState<Gasto[]>([]);
@@ -39,6 +40,11 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
     const unsubscribe = subscribeToGastos(setGastos);
     return () => unsubscribe();
   }, []);
+
+  // Filtrar métodos de pago según el titular seleccionado
+  const metodosFiltrados = metodosPago.filter(m =>
+    m.titular === null || m.titular === titular || titular === 'compartido'
+  );
 
   // Focus en el input cuando se monta
   useEffect(() => {
@@ -91,6 +97,7 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
         categoria: selectedCategory,
         titular: titular,
         conVales: categoria?.esVales || false,
+        metodoPago: metodoPago || undefined,
       });
 
       // Show success state
@@ -223,7 +230,10 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
           <button
             key={option.value}
             type="button"
-            onClick={() => setTitular(option.value)}
+            onClick={() => {
+              setTitular(option.value);
+              setMetodoPago(''); // Reset método de pago al cambiar titular
+            }}
             className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
               titular === option.value
                 ? option.color === 'pink'
@@ -237,6 +247,26 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
             {option.label}
           </button>
         ))}
+      </div>
+
+      {/* Método de pago selector */}
+      <div className="mb-4">
+        <div className="relative">
+          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+          <select
+            value={metodoPago}
+            onChange={(e) => setMetodoPago(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-purple-500/50 cursor-pointer"
+          >
+            <option value="" className="bg-[#1a1a2e]">Método de pago (opcional)</option>
+            {metodosFiltrados.map((m) => (
+              <option key={m.id} value={m.id} className="bg-[#1a1a2e]">
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+        </div>
       </div>
 
       {/* Categories Grid - 2 taps */}
