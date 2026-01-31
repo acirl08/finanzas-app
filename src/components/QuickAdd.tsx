@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Plus, ShoppingCart, Utensils, Car, Heart, Sparkles, Package, Check, X } from 'lucide-react';
-import { addGasto } from '@/lib/firestore';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Plus, ShoppingCart, Utensils, Car, Heart, Sparkles, Package, Check, Settings2, AlertCircle } from 'lucide-react';
+import { addGasto, subscribeToGastos, Gasto } from '@/lib/firestore';
+import { PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 // 6 categorías simplificadas para quick-add
 const QUICK_CATEGORIES = [
@@ -14,6 +16,9 @@ const QUICK_CATEGORIES = [
   { id: 'entretenimiento', label: 'Diversión', icon: Sparkles, color: 'from-purple-500 to-violet-500', esVales: false },
   { id: 'otros_gustos', label: 'Otros', icon: Package, color: 'from-gray-500 to-slate-500', esVales: false },
 ];
+
+// Montos rápidos más comunes
+const QUICK_AMOUNTS = [50, 100, 200, 500];
 
 interface QuickAddProps {
   defaultTitular?: 'alejandra' | 'ricardo' | 'compartido';
@@ -26,16 +31,44 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
   const [titular, setTitular] = useState<'alejandra' | 'ricardo' | 'compartido'>(defaultTitular);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [gastos, setGastos] = useState<Gasto[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Subscribe to gastos for budget calculations
+  useEffect(() => {
+    const unsubscribe = subscribeToGastos(setGastos);
+    return () => unsubscribe();
+  }, []);
 
   // Focus en el input cuando se monta
   useEffect(() => {
-    // Small delay to ensure smooth animation
     const timer = setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
     return () => clearTimeout(timer);
   }, []);
+
+  // Calcular presupuesto diario y si excede
+  const budgetInfo = useMemo(() => {
+    const today = new Date();
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const dayOfMonth = today.getDate();
+    const daysRemaining = Math.max(1, daysInMonth - dayOfMonth + 1);
+    const mesActual = today.toISOString().slice(0, 7);
+    const hoy = today.toISOString().split('T')[0];
+
+    const gastosVariables = gastos.filter(g =>
+      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
+    );
+    const totalMes = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
+    const disponible = PRESUPUESTO_VARIABLE - totalMes;
+    const presupuestoDiario = Math.max(0, Math.floor(disponible / daysRemaining));
+
+    const gastosHoy = gastosVariables.filter(g => g.fecha === hoy);
+    const totalHoy = gastosHoy.reduce((sum, g) => sum + g.monto, 0);
+
+    return { presupuestoDiario, totalHoy, disponible };
+  }, [gastos]);
 
   const handleSubmit = async () => {
     if (!monto || !selectedCategory) return;
@@ -106,17 +139,32 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
     );
   }
 
+  // Detectar si el monto excede el presupuesto diario
+  const montoNum = Number(monto) || 0;
+  const exceedsDaily = montoNum > budgetInfo.presupuestoDiario && budgetInfo.presupuestoDiario > 0;
+
   return (
     <div className="glass-card">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-          <Plus className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+            <Plus className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white">Registrar Gasto</h3>
+            <p className="text-xs text-white/50">
+              Diario: ${budgetInfo.presupuestoDiario.toLocaleString()}
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold text-white">Registrar Gasto</h3>
-          <p className="text-xs text-white/50">Rápido y fácil</p>
-        </div>
+        <Link
+          href="/registrar"
+          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+          title="Más opciones"
+        >
+          <Settings2 className="w-4 h-4 text-white/40" />
+        </Link>
       </div>
 
       {/* Monto Input - BIG and prominent */}
@@ -130,8 +178,38 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
             value={monto}
             onChange={(e) => setMonto(e.target.value)}
             placeholder="0"
-            className="w-full bg-white/5 border-2 border-white/10 rounded-2xl pl-12 pr-4 py-5 text-4xl font-bold text-white text-center placeholder:text-white/20 focus:outline-none focus:border-purple-500/50 transition-colors"
+            className={`w-full bg-white/5 border-2 rounded-2xl pl-12 pr-4 py-5 text-4xl font-bold text-white text-center placeholder:text-white/20 focus:outline-none transition-colors ${
+              exceedsDaily ? 'border-amber-500/50 focus:border-amber-500' : 'border-white/10 focus:border-purple-500/50'
+            }`}
           />
+        </div>
+
+        {/* Warning si excede presupuesto diario */}
+        {exceedsDaily && (
+          <div className="flex items-center gap-2 mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <p className="text-xs text-amber-400">
+              Esto excede tu presupuesto diario de ${budgetInfo.presupuestoDiario.toLocaleString()}
+            </p>
+          </div>
+        )}
+
+        {/* Montos rápidos */}
+        <div className="flex gap-2 mt-3">
+          {QUICK_AMOUNTS.map((amount) => (
+            <button
+              key={amount}
+              type="button"
+              onClick={() => setMonto(amount.toString())}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+                Number(monto) === amount
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-white/5 text-white/60 hover:bg-white/10'
+              }`}
+            >
+              ${amount}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -199,14 +277,22 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
       </div>
 
       {/* Helper text */}
-      <p className="text-center text-white/30 text-xs mt-4">
-        {!monto
-          ? 'Escribe el monto primero'
-          : !selectedCategory
-          ? 'Ahora toca una categoría para guardar'
-          : 'Guardando...'
-        }
-      </p>
+      <div className="text-center mt-4">
+        <p className="text-white/30 text-xs">
+          {!monto
+            ? 'Escribe el monto primero'
+            : !selectedCategory
+            ? 'Ahora toca una categoría para guardar'
+            : 'Guardando...'
+          }
+        </p>
+        <Link
+          href="/registrar"
+          className="text-purple-400/70 hover:text-purple-400 text-xs mt-2 inline-block"
+        >
+          ¿Necesitas más opciones? →
+        </Link>
+      </div>
     </div>
   );
 }

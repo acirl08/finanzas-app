@@ -1,15 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import QuickAdd from '@/components/QuickAdd';
 import GastoForm from '@/components/GastoForm';
-import { Sparkles, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
-import { PRESUPUESTO_VARIABLE } from '@/lib/data';
+import { PRESUPUESTO_VARIABLE, categoriaLabels } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
+import { useGastosDelMes, useGastosPorCategoria } from '@/hooks/useGastosFilters';
 
 export default function RegistrarPage() {
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAdvancedForm, setShowAdvancedForm] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToGastos((gastosActualizados) => {
@@ -19,36 +22,28 @@ export default function RegistrarPage() {
     return () => unsubscribe();
   }, []);
 
-  // Filtrar gastos del mes actual
+  // Usar hooks centralizados
+  const gastosData = useGastosDelMes(gastos);
+  const categoriaData = useGastosPorCategoria(gastosData.gastosVariables);
+
   const today = new Date();
-  const mesActual = today.toISOString().slice(0, 7);
-  const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
+  const totalGastadoVariables = gastosData.totalVariables;
+  const restante = gastosData.disponibleVariables;
+  const porcentaje = Math.min(gastosData.porcentajeVariables, 100);
 
-  // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
-  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
-  const totalGastadoVariables = gastosVariablesDelMes.reduce((sum, g) => sum + g.monto, 0);
-  const restante = PRESUPUESTO_VARIABLE - totalGastadoVariables;
-  const porcentaje = Math.min((totalGastadoVariables / PRESUPUESTO_VARIABLE) * 100, 100);
-
-  // Calcular gastos por categoría (solo variables, sin imprevistos)
-  const gastosPorCategoria = gastosVariablesDelMes.reduce((acc, g) => {
-    acc[g.categoria] = (acc[g.categoria] || 0) + g.monto;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const categoriasOrdenadas = Object.entries(gastosPorCategoria)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4);
+  // Categorías ordenadas (top 4)
+  const categoriasOrdenadas = categoriaData.slice(0, 4).map(c => [c.categoria, c.total] as [string, number]);
 
   const categoryColors: Record<string, string> = {
-    comida: 'bg-orange-500',
-    transporte: 'bg-blue-500',
+    super: 'bg-blue-500',
+    restaurantes: 'bg-orange-500',
+    transporte: 'bg-emerald-500',
     entretenimiento: 'bg-purple-500',
-    salud: 'bg-green-500',
+    salud: 'bg-red-500',
     ropa: 'bg-pink-500',
     hogar: 'bg-yellow-500',
     servicios: 'bg-indigo-500',
-    otros: 'bg-gray-500',
+    otros_gustos: 'bg-gray-500',
   };
 
   // Determinar color del progreso
@@ -62,7 +57,7 @@ export default function RegistrarPage() {
   const tips = [
     {
       text: "Registra tus gastos inmediatamente después de hacerlos. Esto te ayudará a ser más consciente de tu dinero.",
-      stat: gastosDelMes.length > 0 ? `Ya registraste ${gastosDelMes.length} gastos este mes` : null,
+      stat: gastosData.gastosDelMes.length > 0 ? `Ya registraste ${gastosData.gastosDelMes.length} gastos este mes` : null,
     },
     {
       text: "Antes de comprar algo, espera 24 horas. Si aún lo quieres mañana, considera comprarlo.",
@@ -103,29 +98,39 @@ export default function RegistrarPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form */}
-        <div className="lg:col-span-2">
-          <GastoForm />
+        {/* Form - Quick Add as default */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Quick Add - Flujo rápido principal */}
+          <QuickAdd defaultTitular="alejandra" />
+
+          {/* Toggle para formulario avanzado */}
+          <button
+            onClick={() => setShowAdvancedForm(!showAdvancedForm)}
+            className="w-full flex items-center justify-center gap-2 py-3 text-sm text-white/50 hover:text-white/70 transition-colors border border-white/10 rounded-xl hover:bg-white/5"
+          >
+            {showAdvancedForm ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Ocultar opciones avanzadas
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Más opciones (fecha, descripción, método de pago)
+              </>
+            )}
+          </button>
+
+          {/* Formulario avanzado - colapsable */}
+          {showAdvancedForm && (
+            <div className="animate-in slide-in-from-top-2 duration-200">
+              <GastoForm />
+            </div>
+          )}
         </div>
 
         {/* Tips Sidebar */}
         <div className="space-y-4">
-          {/* Tip Card - Rotativo */}
-          <div className="glass-card">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-5 h-5 text-purple-400" />
-              <h3 className="font-semibold text-white">Tip del día</h3>
-            </div>
-            <p className="text-sm text-white/60 leading-relaxed">
-              {currentTip.text}
-            </p>
-            {currentTip.stat && (
-              <p className="text-xs text-purple-400 mt-3 font-medium">
-                {currentTip.stat}
-              </p>
-            )}
-          </div>
-
           {/* Meta Card - Datos reales de Firebase */}
           <div className="glass-card-dark">
             <div className="flex items-center gap-2 mb-4">
@@ -156,6 +161,22 @@ export default function RegistrarPage() {
             </div>
           </div>
 
+          {/* Tip Card - Rotativo */}
+          <div className="glass-card">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              <h3 className="font-semibold text-white">Tip del día</h3>
+            </div>
+            <p className="text-sm text-white/60 leading-relaxed">
+              {currentTip.text}
+            </p>
+            {currentTip.stat && (
+              <p className="text-xs text-purple-400 mt-3 font-medium">
+                {currentTip.stat}
+              </p>
+            )}
+          </div>
+
           {/* Warning Card */}
           <div className="glass-card border border-yellow-500/30 bg-yellow-500/5">
             <div className="flex items-center gap-2 mb-3">
@@ -182,7 +203,7 @@ export default function RegistrarPage() {
                       <div className={`w-2 h-8 rounded-full ${categoryColors[categoria] || 'bg-gray-500'}`} />
                       <div className="flex-1">
                         <div className="flex justify-between text-sm">
-                          <span className="text-white/70 capitalize">{categoria}</span>
+                          <span className="text-white/70">{categoriaLabels[categoria] || categoria}</span>
                           <span className="text-white font-medium">{formatMoney(amount)}</span>
                         </div>
                         <div className="h-1 bg-white/10 rounded-full mt-1">

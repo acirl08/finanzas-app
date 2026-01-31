@@ -7,6 +7,7 @@ import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import SwipeableGastoItem from '@/components/SwipeableGastoItem';
+import { useGastosDelMes } from '@/hooks/useGastosFilters';
 
 function getCategoryIcon(categoria: string) {
   const icons: Record<string, string> = {
@@ -60,21 +61,18 @@ export default function GastosPage() {
     return () => unsubscribe();
   }, []);
 
-  // Filtrar gastos del mes actual
+  // Usar hook centralizado
+  const gastosData = useGastosDelMes(gastos);
   const today = new Date();
-  const mesActual = today.toISOString().slice(0, 7);
-  const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
 
-  // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
-  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
-
-  const gastosFiltrados = gastosVariablesDelMes
+  const gastosFiltrados = gastosData.gastosVariables
     .filter(g => filtro === 'todos' || g.titular === filtro)
     .filter(g => g.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
-  const totalMes = gastosVariablesDelMes.reduce((sum, g) => sum + g.monto, 0);
-  const restante = PRESUPUESTO_VARIABLE - totalMes;
+  const totalMes = gastosData.totalVariables;
+  const restante = gastosData.disponibleVariables;
+  const gastosVariablesDelMes = gastosData.gastosVariables;
 
   if (loading) {
     return (

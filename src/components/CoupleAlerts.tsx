@@ -7,6 +7,7 @@ import { presupuestosPersonales } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { toast } from 'sonner';
+import { useGastosPorTitular } from '@/hooks/useGastosFilters';
 
 interface CoupleAlertsProps {
   className?: string;
@@ -72,6 +73,9 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
     return () => unsubscribe();
   }, []);
 
+  // Usar hook centralizado
+  const titularData = useGastosPorTitular(gastos);
+
   // Generar alertas basadas en el estado actual
   const alerts = useMemo(() => {
     const today = new Date();
@@ -80,30 +84,25 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
     const diasEnMes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const porcentajeMes = (diaActual / diasEnMes) * 100;
 
-    // Filtrar gastos del mes (solo variables, sin imprevistos)
-    const gastosDelMes = gastos.filter(g =>
-      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
-    );
-
-    // Gastos por titular
+    // Usar datos del hook centralizado
     const gastosPorTitular = {
-      alejandra: gastosDelMes.filter(g => g.titular === 'alejandra').reduce((sum, g) => sum + g.monto, 0),
-      ricardo: gastosDelMes.filter(g => g.titular === 'ricardo').reduce((sum, g) => sum + g.monto, 0),
-      compartido: gastosDelMes.filter(g => g.titular === 'compartido' || !g.titular).reduce((sum, g) => sum + g.monto, 0),
+      alejandra: titularData.alejandra.total,
+      ricardo: titularData.ricardo.total,
+      compartido: titularData.compartido.total,
     };
 
     // Porcentaje usado por titular
     const porcentajePorTitular = {
-      alejandra: (gastosPorTitular.alejandra / presupuestosPersonales.alejandra) * 100,
-      ricardo: (gastosPorTitular.ricardo / presupuestosPersonales.ricardo) * 100,
-      compartido: (gastosPorTitular.compartido / presupuestosPersonales.compartido) * 100,
+      alejandra: titularData.alejandra.porcentaje,
+      ricardo: titularData.ricardo.porcentaje,
+      compartido: titularData.compartido.porcentaje,
     };
 
     // Disponible por titular
     const disponiblePorTitular = {
-      alejandra: presupuestosPersonales.alejandra - gastosPorTitular.alejandra,
-      ricardo: presupuestosPersonales.ricardo - gastosPorTitular.ricardo,
-      compartido: presupuestosPersonales.compartido - gastosPorTitular.compartido,
+      alejandra: titularData.alejandra.disponible,
+      ricardo: titularData.ricardo.disponible,
+      compartido: titularData.compartido.disponible,
     };
 
     const newAlerts: Alert[] = [];
@@ -190,7 +189,7 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
     }
 
     return newAlerts;
-  }, [gastos]);
+  }, [titularData]);
 
   // Mostrar toasts para alertas nuevas de tipo danger/warning
   useEffect(() => {

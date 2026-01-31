@@ -5,6 +5,7 @@ import { User, Users, Wallet } from 'lucide-react';
 import { presupuestosPersonales, PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
+import { useGastosPorTitular } from '@/hooks/useGastosFilters';
 
 export default function PresupuestosPersonales() {
   const [gastos, setGastos] = useState<Gasto[]>([]);
@@ -20,18 +21,14 @@ export default function PresupuestosPersonales() {
     return () => unsubscribe();
   }, []);
 
-  // Filtrar gastos del mes actual
-  const mesActual = new Date().toISOString().slice(0, 7); // "2026-01"
-  const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
+  // Usar hook centralizado
+  const titularData = useGastosPorTitular(gastos);
 
-  // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
-  const gastosVariablesDelMes = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
-
-  // Calcular gastos por titular (solo variables)
+  // Calcular gastos por titular usando el hook
   const gastosPorTitular = {
-    alejandra: gastosVariablesDelMes.filter(g => g.titular === 'alejandra').reduce((sum, g) => sum + g.monto, 0),
-    ricardo: gastosVariablesDelMes.filter(g => g.titular === 'ricardo').reduce((sum, g) => sum + g.monto, 0),
-    compartido: gastosVariablesDelMes.filter(g => g.titular === 'compartido').reduce((sum, g) => sum + g.monto, 0),
+    alejandra: titularData.alejandra.total,
+    ricardo: titularData.ricardo.total,
+    compartido: titularData.compartido.total,
   };
 
   const presupuestos = [

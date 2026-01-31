@@ -46,9 +46,11 @@ import PWAWidget from './PWAWidget';
 import QuickAdd from './QuickAdd';
 import WeeklyBudget from './WeeklyBudget';
 import HeroMetric from './HeroMetric';
+import KeyMetrics from './KeyMetrics';
 import CategoryBudgets from './CategoryBudgets';
 import MonthComparison from './MonthComparison';
-import CoupleAlerts from './CoupleAlerts';
+import UnifiedAlerts from './UnifiedAlerts';
+import EmergencyFund from './EmergencyFund';
 import { formatMoney, formatMoneyCompact as formatCompactMoney } from '@/lib/utils';
 
 // Traffic light status
@@ -458,52 +460,24 @@ export default function ProfessionalDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* ============ HERO METRIC - La métrica más importante ============ */}
+      {/* ============ THE 3 KEY METRICS ============ */}
+      {/* 1. Disponible del Mes (HeroMetric) */}
       <HeroMetric />
 
-      {/* ============ QUICK ADD + WEEKLY BUDGET ============ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* QuickAdd - Registro rápido */}
-        <QuickAdd defaultTitular="alejandra" />
+      {/* 2 & 3. Disponible Hoy + Progreso Deuda */}
+      <KeyMetrics />
 
-        {/* WeeklyBudget - Presupuesto semanal */}
-        <WeeklyBudget />
-      </div>
+      {/* ============ QUICK ADD ============ */}
+      <QuickAdd defaultTitular="alejandra" />
 
-      {/* ============ ROW 1: DEUDA + VALES ============ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Deuda Total */}
-        <div className="metric-card hover-lift">
-          <div className="metric-card-header">
-            <div className="metric-card-title">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span>Deuda Total</span>
-              <span className="separator">|</span>
-              <span className="text-[var(--text-tertiary)]">MXN</span>
-            </div>
-            <TrendingDown className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="metric-card-subtitle">{deudas.filter(d => !d.liquidada).length} cuentas activas</div>
-          <div className="metric-card-value">
-            {loadingDeudas ? <span className="animate-pulse">...</span> : formatCompactMoney(deudaCalculations.totalesDeuda.deudaTotal)}
-          </div>
-          <div className="mt-3 h-10">
-            <MiniSparkline data={deudaSparklineData} color="#F87171" />
-          </div>
-          <div className="metric-card-change">
-            <ArrowDownRight className="w-4 h-4 text-emerald-400" />
-            <span className="text-emerald-400 text-sm font-medium">-{formatCompactMoney(deudaCalculations.deudaPagada)} pagado</span>
-          </div>
-        </div>
-
-        {/* Card 2: Vales de Despensa */}
+      {/* ============ SECONDARY METRICS: VALES + IMPREVISTOS + RACHA ============ */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Vales de Despensa */}
         <div className="metric-card hover-lift">
           <div className="metric-card-header">
             <div className="metric-card-title">
               <div className="w-2 h-2 rounded-full bg-blue-500" />
-              <span>Vales</span>
-              <span className="separator">|</span>
-              <span className="text-[var(--text-tertiary)]">Despensa</span>
+              <span>Vales Despensa</span>
             </div>
             <Wallet className="w-4 h-4 text-blue-400" />
           </div>
@@ -525,56 +499,52 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
 
-        {/* Card 3: Racha */}
+        {/* Fondo de Imprevistos - Compact */}
+        <EmergencyFund compact />
+
+        {/* Racha + Días info */}
         <div className="metric-card hover-lift">
           <div className="metric-card-header">
             <div className="metric-card-title">
               <div className="w-2 h-2 rounded-full bg-orange-500" />
               <span>Racha</span>
             </div>
-            <Flame className="w-5 h-5 text-orange-400" />
+            <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+              <Clock className="w-3 h-3" />
+              <span>{daysRemaining} días restantes</span>
+            </div>
           </div>
-          <div className="metric-card-subtitle">Récord: {rachaRecord} días</div>
-          <div className="text-4xl font-black tracking-tight text-orange-400">
-            {racha} <span className="text-lg font-medium text-[var(--text-tertiary)]">días</span>
+          <div className="flex items-end justify-between">
+            <div>
+              <div className="text-4xl font-black tracking-tight text-orange-400">
+                {racha} <span className="text-lg font-medium text-[var(--text-tertiary)]">días</span>
+              </div>
+              <div className="text-sm text-[var(--text-tertiary)] mt-1">Récord: {rachaRecord} días</div>
+            </div>
+            <Flame className="w-10 h-10 text-orange-400/30" />
           </div>
           <div className="mt-4 flex gap-1">
             {Array.from({ length: 7 }, (_, i) => (
               <div key={i} className={`flex-1 h-2 rounded-full ${i < Math.min(racha, 7) ? 'bg-gradient-to-r from-orange-500 to-amber-400' : 'bg-[var(--bg-hover)]'}`} />
             ))}
           </div>
-          <div className="mt-3 text-sm text-[var(--text-tertiary)]">{racha > 0 ? 'Sigue así!' : 'Comienza hoy'}</div>
-        </div>
-
-        {/* Card 4: Días Restantes */}
-        <div className="metric-card hover-lift">
-          <div className="metric-card-header">
-            <div className="metric-card-title">
-              <div className="w-2 h-2 rounded-full bg-purple-500" />
-              <span>Mes</span>
-            </div>
-            <Clock className="w-4 h-4 text-purple-400" />
-          </div>
-          <div className="metric-card-subtitle">{today.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</div>
-          <div className="text-4xl font-black tracking-tight text-purple-400">
-            {daysRemaining} <span className="text-lg font-medium text-[var(--text-tertiary)]">días</span>
-          </div>
-          <div className="mt-4">
-            <div className="progress-bar-bg">
-              <div
-                className="progress-bar-fill bg-gradient-to-r from-purple-500 to-pink-400"
-                style={{ width: `${(dayOfMonth / daysInMonth) * 100}%` }}
-              />
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-[var(--text-tertiary)]">
-              <span>Día {dayOfMonth}</span>
-              <span>de {daysInMonth}</span>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* ============ ROW 2: PRESUPUESTOS POR PERSONA ============ */}
+      {/* ============ PRESUPUESTOS POR PERSONA (Collapsible) ============ */}
+      <div>
+        <button
+          onClick={() => toggleSection('budgets')}
+          className="w-full flex items-center justify-between mb-4 px-1 py-2 hover:bg-white/5 rounded-lg transition-colors"
+        >
+          <span className="text-sm font-medium text-white/70">Presupuestos Personales</span>
+          {collapsedSections['budgets'] ? (
+            <ChevronDown className="w-4 h-4 text-white/50" />
+          ) : (
+            <ChevronUp className="w-4 h-4 text-white/50" />
+          )}
+        </button>
+        {!collapsedSections['budgets'] && (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Alejandra */}
         {(() => {
@@ -698,6 +668,8 @@ export default function ProfessionalDashboard() {
             </button>
           );
         })()}
+      </div>
+        )}
       </div>
 
       {/* ============ MODAL: DESGLOSE DE GASTOS ============ */}
@@ -901,8 +873,8 @@ export default function ProfessionalDashboard() {
         </div>
       )}
 
-      {/* ============ COUPLE ALERTS ============ */}
-      <CoupleAlerts />
+      {/* ============ UNIFIED ALERTS ============ */}
+      <UnifiedAlerts maxAlerts={4} />
 
       {/* ============ CATEGORY BUDGETS + MONTH COMPARISON ============ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

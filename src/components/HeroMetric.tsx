@@ -5,6 +5,7 @@ import { TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle, XCircle } 
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
+import { useGastosDelMes } from '@/hooks/useGastosFilters';
 
 export default function HeroMetric() {
   const [gastos, setGastos] = useState<Gasto[]>([]);
@@ -18,30 +19,22 @@ export default function HeroMetric() {
     return () => unsubscribe();
   }, []);
 
-  const data = useMemo(() => {
-    const today = new Date();
-    const mesActual = today.toISOString().slice(0, 7);
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const dayOfMonth = today.getDate();
+  // Usar hook centralizado
+  const gastosData = useGastosDelMes(gastos);
 
-    // Filtrar gastos variables del mes (no fijos, no vales, no imprevistos)
-    const gastosDelMes = gastos.filter(g =>
-      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
-    );
-    const totalGastado = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
-    const disponible = PRESUPUESTO_VARIABLE - totalGastado;
+  const data = useMemo(() => {
+    const { totalVariables, disponibleVariables, porcentajeVariables, daysInMonth, dayOfMonth, daysRemaining } = gastosData;
 
     // Calcular si van bien según el día del mes
     const presupuestoIdealHastaHoy = (PRESUPUESTO_VARIABLE / daysInMonth) * dayOfMonth;
-    const diferencia = presupuestoIdealHastaHoy - totalGastado;
-    const porcentajeUsado = (totalGastado / PRESUPUESTO_VARIABLE) * 100;
+    const diferencia = presupuestoIdealHastaHoy - totalVariables;
     const porcentajeDelMes = (dayOfMonth / daysInMonth) * 100;
 
     // Determinar estado
     let status: 'excellent' | 'good' | 'warning' | 'danger' = 'good';
-    if (porcentajeUsado <= porcentajeDelMes - 10) status = 'excellent';
-    else if (porcentajeUsado <= porcentajeDelMes + 5) status = 'good';
-    else if (porcentajeUsado <= porcentajeDelMes + 20) status = 'warning';
+    if (porcentajeVariables <= porcentajeDelMes - 10) status = 'excellent';
+    else if (porcentajeVariables <= porcentajeDelMes + 5) status = 'good';
+    else if (porcentajeVariables <= porcentajeDelMes + 20) status = 'warning';
     else status = 'danger';
 
     // Mensaje contextual
@@ -59,19 +52,19 @@ export default function HeroMetric() {
       submensaje = `${formatMoney(Math.abs(diferencia))} arriba de lo ideal`;
     } else {
       mensaje = 'Se están pasando';
-      submensaje = `Reduzcan gastos los próximos ${daysInMonth - dayOfMonth} días`;
+      submensaje = `Reduzcan gastos los próximos ${daysRemaining} días`;
     }
 
     return {
-      disponible,
-      totalGastado,
-      porcentajeUsado,
+      disponible: disponibleVariables,
+      totalGastado: totalVariables,
+      porcentajeUsado: porcentajeVariables,
       status,
       mensaje,
       submensaje,
-      diasRestantes: daysInMonth - dayOfMonth,
+      diasRestantes: daysRemaining,
     };
-  }, [gastos]);
+  }, [gastosData]);
 
   const statusConfig = {
     excellent: {

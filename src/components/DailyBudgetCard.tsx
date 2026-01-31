@@ -6,6 +6,7 @@ import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE, VALES_DESPENSA } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { getTotalAhorroMensual } from './SavingsGoals';
+import { useGastosDelMes, useRacha } from '@/hooks/useGastosFilters';
 
 export default function DailyBudgetCard() {
   const [gastos, setGastos] = useState<Gasto[]>([]);
@@ -44,60 +45,39 @@ export default function DailyBudgetCard() {
     };
   }, []);
 
+  // Usar hooks centralizados
+  const gastosData = useGastosDelMes(gastos);
+  const rachaData = useRacha(gastos);
+
   // Memoized calculations to prevent unnecessary re-renders
   const budgetData = useMemo(() => {
-    const today = new Date();
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const dayOfMonth = today.getDate();
-    const daysRemaining = Math.max(1, daysInMonth - dayOfMonth + 1);
-
-    const mesActual = today.toISOString().slice(0, 7);
-    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
-
-    // Gastos variables (no fijos, no vales, no imprevistos)
-    const gastosVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
-    const totalGastadoMes = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
-
-    // Gastos con vales
-    const gastosConVales = gastosDelMes.filter(g => g.conVales === true);
-    const totalGastadoVales = gastosConVales.reduce((sum, g) => sum + g.monto, 0);
-    const disponibleVales = VALES_DESPENSA - totalGastadoVales;
-
-    // Today's gastos
-    const hoy = today.toISOString().split('T')[0];
-    const gastosHoy = gastosVariables.filter(g => g.fecha === hoy);
-    const totalGastadoHoy = gastosHoy.reduce((sum, g) => sum + g.monto, 0);
+    const {
+      totalVariables,
+      totalHoy,
+      disponibleVales,
+      presupuestoDiario: presupuestoDiarioBase,
+      daysRemaining,
+    } = gastosData;
 
     // Budget calculations - DESCONTAR AHORRO MENSUAL del presupuesto disponible
     const presupuestoAjustado = PRESUPUESTO_VARIABLE - ahorroMensual;
-    const presupuestoRestante = presupuestoAjustado - totalGastadoMes;
+    const presupuestoRestante = presupuestoAjustado - totalVariables;
     const presupuestoDiario = Math.max(0, Math.floor(presupuestoRestante / daysRemaining));
-    const disponibleHoy = Math.max(0, presupuestoDiario - totalGastadoHoy);
+    const disponibleHoy = Math.max(0, presupuestoDiario - totalHoy);
 
     // Status
-    const porcentajeUsadoHoy = presupuestoDiario > 0 ? (totalGastadoHoy / presupuestoDiario) * 100 : 0;
+    const porcentajeUsadoHoy = presupuestoDiario > 0 ? (totalHoy / presupuestoDiario) * 100 : 0;
     const status = porcentajeUsadoHoy <= 70 ? 'green' : porcentajeUsadoHoy <= 90 ? 'yellow' : 'red';
 
     // Greeting
+    const today = new Date();
     const hour = today.getHours();
     const isNight = hour >= 20 || hour < 6;
     const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
 
-    // Streak calculation
-    const diasDelMes = Array.from({ length: dayOfMonth }, (_, i) => {
-      const date = new Date(today.getFullYear(), today.getMonth(), i + 1);
-      return date.toISOString().split('T')[0];
-    });
-
-    const diasBajoPresupuesto = diasDelMes.filter(dia => {
-      const gastosDia = gastos.filter(g => g.fecha === dia);
-      const totalDia = gastosDia.reduce((sum, g) => sum + g.monto, 0);
-      return totalDia <= presupuestoDiario;
-    }).length;
-
     return {
-      totalGastadoMes,
-      totalGastadoHoy,
+      totalGastadoMes: totalVariables,
+      totalGastadoHoy: totalHoy,
       presupuestoRestante,
       presupuestoDiario,
       disponibleHoy,
@@ -106,10 +86,10 @@ export default function DailyBudgetCard() {
       status: status as 'green' | 'yellow' | 'red',
       isNight,
       greeting,
-      diasBajoPresupuesto,
+      diasBajoPresupuesto: rachaData.dias,
       presupuestoAjustado,
     };
-  }, [gastos, ahorroMensual]);
+  }, [gastosData, rachaData, ahorroMensual]);
 
   const {
     totalGastadoMes,

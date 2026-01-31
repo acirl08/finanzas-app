@@ -6,6 +6,7 @@ import { subscribeToDeudas, calcularTotalesFromDeudas } from '@/lib/firestore';
 import { deudasIniciales, calcularProyeccionDeudas } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { Deuda } from '@/types';
+import DeudaEditor from '@/components/DeudaEditor';
 
 export default function DeudasPage() {
   const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
@@ -244,6 +245,9 @@ export default function DeudasPage() {
           </div>
         </div>
       )}
+
+      {/* Editor de Deudas */}
+      <DeudaEditor deudas={deudas} />
 
       {/* Motivational Footer */}
       <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl text-center">

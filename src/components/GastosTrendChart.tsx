@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatMoney } from '@/lib/utils';
 import TouchFriendlyChart from './TouchFriendlyChart';
+import { filtrarGastosVariables, filtrarGastosConVales, filtrarGastosFijos, calcularTotal } from '@/hooks/useGastosFilters';
 
 interface MonthData {
   mes: string;
@@ -42,15 +43,9 @@ export default function GastosTrendChart() {
 
             if (esActual) {
               const gastosDelMes = data.data.gastosMes || [];
-              const variable = gastosDelMes
-                .filter((g: any) => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos')
-                .reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
-              const vales = gastosDelMes
-                .filter((g: any) => g.conVales)
-                .reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
-              const fijo = gastosDelMes
-                .filter((g: any) => g.esFijo)
-                .reduce((sum: number, g: any) => sum + (g.monto || 0), 0);
+              const variable = calcularTotal(filtrarGastosVariables(gastosDelMes));
+              const vales = calcularTotal(filtrarGastosConVales(gastosDelMes));
+              const fijo = calcularTotal(filtrarGastosFijos(gastosDelMes));
 
               monthsData.push({
                 mes: mesKey,

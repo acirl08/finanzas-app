@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, DollarSign, CreditCard, Bell, Save, Check, AlertTriangle, RotateCcw, Download } from 'lucide-react';
+import { Settings, DollarSign, CreditCard, Bell, Save, Check, AlertTriangle, RotateCcw, Download, Shield } from 'lucide-react';
 import ExportData from '@/components/ExportData';
-import { deudasIniciales, suscripciones, INGRESO_MENSUAL, VALES_DESPENSA } from '@/lib/data';
+import EmergencyFund from '@/components/EmergencyFund';
+import { deudasIniciales, suscripciones, INGRESO_MENSUAL, VALES_DESPENSA, PRESUPUESTO_IMPREVISTOS } from '@/lib/data';
 import { subscribeToDeudas, updateDeuda, updateConfiguracion, getConfiguracion } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -163,6 +164,7 @@ export default function ConfigPage() {
 
   const tabs = [
     { id: 'general', label: 'General', icon: Settings },
+    { id: 'imprevistos', label: 'Imprevistos', icon: Shield },
     { id: 'deudas', label: 'Deudas', icon: CreditCard },
     { id: 'suscripciones', label: 'Suscripciones', icon: DollarSign },
     { id: 'exportar', label: 'Exportar', icon: Download },
@@ -297,6 +299,51 @@ export default function ConfigPage() {
                 </>
               )}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Imprevistos Tab */}
+      {activeTab === 'imprevistos' && (
+        <div className="space-y-6">
+          {/* Emergency Fund Component */}
+          <EmergencyFund />
+
+          {/* Configuration */}
+          <div className="glass-card">
+            <h3 className="text-lg font-semibold text-white mb-4">Configuración del Fondo</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Presupuesto mensual para imprevistos
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">$</span>
+                  <input
+                    type="number"
+                    defaultValue={PRESUPUESTO_IMPREVISTOS}
+                    className="input-dark pl-8"
+                    disabled
+                  />
+                </div>
+                <p className="text-xs text-white/40 mt-1">
+                  Este monto está configurado en el código. Contacta soporte para cambiarlo.
+                </p>
+              </div>
+
+              <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                <h4 className="font-medium text-purple-300 mb-2">¿Qué son los imprevistos?</h4>
+                <ul className="text-sm text-white/60 space-y-1">
+                  <li>• Emergencias médicas o veterinarias</li>
+                  <li>• Reparaciones urgentes del hogar o auto</li>
+                  <li>• Gastos inesperados que no se pueden evitar</li>
+                </ul>
+                <p className="text-xs text-white/40 mt-3">
+                  No usar para: compras impulsivas, entretenimiento, o cosas que pueden esperar.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
