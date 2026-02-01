@@ -348,22 +348,37 @@ export default function ProfessionalDashboard() {
     return data;
   }, [calculations.gastosVariablesDelMes, dayOfMonth, daysInMonth, today]);
 
-  // IMPORTANTE: Solo mostrar gastos VARIABLES (no fijos como renta, no vales, no imprevistos)
-  const distribucionData = useMemo(() => {
+  // Distribución de TODOS los gastos del mes (fijos + variables + vales)
+  const distribucionTodosData = useMemo(() => {
     const porCategoria: Record<string, number> = {};
-    // Usar gastosVariablesDelMes en vez de gastosDelMes para excluir gastos fijos
-    calculations.gastosVariablesDelMes.forEach((g) => {
-      porCategoria[g.categoria] = (porCategoria[g.categoria] || 0) + g.monto;
+    calculations.gastosDelMes.forEach((g) => {
+      // Usar label descriptivo para categorías especiales
+      let categoria = g.categoria;
+      if (g.esFijo) categoria = 'fijos';
+      if (g.conVales) categoria = 'vales';
+      porCategoria[categoria] = (porCategoria[categoria] || 0) + g.monto;
     });
+
+    const labelsEspeciales: Record<string, string> = {
+      fijos: 'Gastos Fijos',
+      vales: 'Con Vales',
+      ...categoriaLabels
+    };
+
     return Object.entries(porCategoria)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
+      .slice(0, 6)
       .map(([cat, monto], i) => ({
-        name: categoriaLabels[cat] || cat,
+        name: labelsEspeciales[cat] || categoriaLabels[cat] || cat,
         value: monto,
         color: CHART_COLORS[i % CHART_COLORS.length]
       }));
-  }, [calculations.gastosVariablesDelMes]);
+  }, [calculations.gastosDelMes]);
+
+  // Total de todos los gastos del mes
+  const totalTodosGastos = useMemo(() => {
+    return calculations.gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
+  }, [calculations.gastosDelMes]);
 
   const deudasOrdenadas = useMemo(() =>
     [...deudas].filter((d) => !d.liquidada).sort((a, b) => a.prioridad - b.prioridad).slice(0, 5),
@@ -1046,22 +1061,22 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
 
-        {/* Distribución - Donut Chart */}
+        {/* Distribución - Donut Chart - TODOS los gastos */}
         <div className="glass-card">
           <div className="card-header">
             <div className="card-header-title">
               <div className="dot bg-pink-500" />
-              <span>Distribución</span>
+              <span>Distribución Total</span>
             </div>
-            <span className="text-sm text-[var(--text-tertiary)]">Por categoría</span>
+            <span className="text-sm text-[var(--text-tertiary)]">Todos los gastos del mes</span>
           </div>
           <div className="flex flex-col sm:flex-row items-center">
             <div className="w-full sm:w-1/2 h-48 sm:h-64 relative">
-              {chartsReady && !loadingGastos && distribucionData.length > 0 ? (
+              {chartsReady && !loadingGastos && distribucionTodosData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={distribucionData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
-                      {distribucionData.map((entry, index) => (
+                    <Pie data={distribucionTodosData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                      {distribucionTodosData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -1077,17 +1092,17 @@ export default function ProfessionalDashboard() {
                   )}
                 </div>
               )}
-              {distribucionData.length > 0 && (
+              {distribucionTodosData.length > 0 && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-white">{formatCompactMoney(calculations.totalGastadoMes)}</p>
-                    <p className="text-xs text-[var(--text-tertiary)]">Total</p>
+                    <p className="text-2xl font-bold text-white">{formatCompactMoney(totalTodosGastos)}</p>
+                    <p className="text-xs text-[var(--text-tertiary)]">Total mes</p>
                   </div>
                 </div>
               )}
             </div>
             <div className="w-full sm:w-1/2 space-y-2 sm:space-y-3 pt-4 sm:pt-0 sm:pl-4">
-              {distribucionData.map((item, index) => (
+              {distribucionTodosData.map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
