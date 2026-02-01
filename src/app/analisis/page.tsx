@@ -37,8 +37,11 @@ import HealthScore from '@/components/HealthScore';
 import FinancialReport from '@/components/FinancialReport';
 import CashflowForecast from '@/components/CashflowForecast';
 import SmartAlerts from '@/components/SmartAlerts';
+import { useMonth } from '@/contexts/MonthContext';
 
 export default function AnalisisPage() {
+  const { selectedMonth } = useMonth();
+
   // Estado para deudas desde Firestore
   const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
@@ -64,13 +67,12 @@ export default function AnalisisPage() {
     };
   }, []);
 
-  // Calcular ingreso mensual real
+  // Calcular ingreso mensual real del mes seleccionado
   const ingresoMensual = useMemo(() => {
-    const mesActual = new Date().toISOString().slice(0, 7);
-    const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(mesActual));
+    const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(selectedMonth));
     const total = ingresosDelMes.reduce((sum, i) => sum + i.monto, 0);
     return total > 0 ? total : INGRESO_MENSUAL;
-  }, [ingresos]);
+  }, [ingresos, selectedMonth]);
 
   // Calcular todos los datos dinámicamente desde deudas de Firestore
   const totales = useMemo(() => calcularTotalesFromDeudas(deudas), [deudas]);

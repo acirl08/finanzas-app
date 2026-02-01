@@ -3,12 +3,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { subscribeToIngresos, Ingreso } from '@/lib/firestore';
 import { INGRESO_MENSUAL } from '@/lib/data';
+import { useMonth } from '@/contexts/MonthContext';
 
 /**
- * Hook para obtener los ingresos del mes actual.
+ * Hook para obtener los ingresos del mes seleccionado.
  * Retorna los ingresos reales registrados, o el valor fijo como fallback.
  */
 export function useIngresosMes() {
+  const { selectedMonth } = useMonth();
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,9 +23,7 @@ export function useIngresosMes() {
   }, []);
 
   const data = useMemo(() => {
-    const mesActual = new Date().toISOString().slice(0, 7);
-
-    const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(mesActual));
+    const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(selectedMonth));
     const totalIngresos = ingresosDelMes.reduce((sum, i) => sum + i.monto, 0);
 
     // Usar ingresos reales si hay registrados, sino el default
@@ -37,7 +37,7 @@ export function useIngresosMes() {
       usandoDefault,
       loading,
     };
-  }, [ingresos, loading]);
+  }, [ingresos, loading, selectedMonth]);
 
   return data;
 }

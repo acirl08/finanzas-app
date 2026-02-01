@@ -15,8 +15,10 @@ import {
 import { deudasIniciales, calcularGastosFijos, INGRESO_MENSUAL, PRESUPUESTO_VARIABLE, calcularProyeccionDeudas } from '@/lib/data';
 import { subscribeToIngresos, Ingreso } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
+import { useMonth } from '@/contexts/MonthContext';
 
 export default function PaymentPlanExplainer() {
+  const { selectedMonth } = useMonth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'resumen' | 'detalle'>('resumen');
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
@@ -26,12 +28,11 @@ export default function PaymentPlanExplainer() {
     return () => unsub();
   }, []);
 
-  // Calcular ingreso mensual real
+  // Calcular ingreso mensual real del mes seleccionado
   const ingresoMensual = useMemo(() => {
-    const mesActual = new Date().toISOString().slice(0, 7);
-    const total = ingresos.filter(i => i.fecha.startsWith(mesActual)).reduce((sum, i) => sum + i.monto, 0);
+    const total = ingresos.filter(i => i.fecha.startsWith(selectedMonth)).reduce((sum, i) => sum + i.monto, 0);
     return total > 0 ? total : INGRESO_MENSUAL;
-  }, [ingresos]);
+  }, [ingresos, selectedMonth]);
 
   const gastosFijos = calcularGastosFijos();
   const pagosMinimos = deudasIniciales.reduce((sum, d) => sum + d.pagoMinimo, 0);
