@@ -26,6 +26,7 @@ import {
   Info,
   PawPrint,
   HelpCircle,
+  AlertCircle,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -145,6 +146,7 @@ export default function ProfessionalDashboard() {
   const [editForm, setEditForm] = useState<{ categoria: string; titular: string; monto: string; descripcion: string }>({ categoria: '', titular: '', monto: '', descripcion: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [showNoReconocidos, setShowNoReconocidos] = useState(false);
+  const [showNoPlanificados, setShowNoPlanificados] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
@@ -579,7 +581,10 @@ export default function ProfessionalDashboard() {
           const cantidadNoPlanificados = gastosNoPlanificados.length;
 
           return (
-            <div className={`metric-card hover-lift ${cantidadNoPlanificados > 0 ? 'border-orange-500/30' : ''}`}>
+            <button
+              onClick={() => cantidadNoPlanificados > 0 && setShowNoPlanificados(true)}
+              className={`metric-card hover-lift text-left w-full ${cantidadNoPlanificados > 0 ? 'border-orange-500/30 cursor-pointer' : ''}`}
+            >
               <div className="metric-card-header">
                 <div className="metric-card-title">
                   <div className={`w-2 h-2 rounded-full ${cantidadNoPlanificados > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
@@ -599,10 +604,10 @@ export default function ProfessionalDashboard() {
               </div>
               {cantidadNoPlanificados > 0 && (
                 <div className="mt-4 text-xs text-orange-400/70">
-                  Gastos que no estaban presupuestados
+                  Clic para ver desglose →
                 </div>
               )}
-            </div>
+            </button>
           );
         })()}
 
@@ -1291,6 +1296,96 @@ export default function ProfessionalDashboard() {
       </div>
         )}
       </div>
+
+      {/* ============ MODAL: GASTOS NO PLANIFICADOS ============ */}
+      {showNoPlanificados && (() => {
+        const gastosNoPlanificados = gastos.filter(g => g.fecha.startsWith(mesActual) && (g as any).planificado === false);
+        const totalNoPlanificado = gastosNoPlanificados.reduce((sum, g) => sum + g.monto, 0);
+
+        // Agrupar por categoría
+        const porCategoria: Record<string, { total: number; count: number; gastos: Gasto[] }> = {};
+        gastosNoPlanificados.forEach(g => {
+          const cat = g.categoria;
+          if (!porCategoria[cat]) {
+            porCategoria[cat] = { total: 0, count: 0, gastos: [] };
+          }
+          porCategoria[cat].total += g.monto;
+          porCategoria[cat].count++;
+          porCategoria[cat].gastos.push(g);
+        });
+
+        const categoriasOrdenadas = Object.entries(porCategoria)
+          .map(([categoria, data]) => ({ categoria, ...data }))
+          .sort((a, b) => b.total - a.total);
+
+        return (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-2 sm:p-4" onClick={() => setShowNoPlanificados(false)}>
+            <div className="bg-[#1a1a2e] border border-orange-500/30 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Gastos No Planificados</h3>
+                    <p className="text-xs text-orange-400">{gastosNoPlanificados.length} gastos • {formatMoney(totalNoPlanificado)}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowNoPlanificados(false)} className="p-1.5 hover:bg-white/10 rounded-lg">
+                  <X className="w-5 h-5 text-white/60" />
+                </button>
+              </div>
+
+              <div className="p-4 overflow-y-auto max-h-[60vh] space-y-4">
+                {/* Resumen por categoría */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-white/70">Por categoría</h4>
+                  {categoriasOrdenadas.map(({ categoria, total, count }) => (
+                    <div key={categoria} className="flex items-center justify-between p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-orange-400" />
+                        <span className="text-sm text-white">{categoriaLabels[categoria] || categoria}</span>
+                        <span className="text-xs px-2 py-0.5 bg-white/10 text-white/50 rounded">
+                          {count}
+                        </span>
+                      </div>
+                      <span className="text-sm font-medium text-orange-400">{formatMoney(total)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Detalle de gastos */}
+                <details className="group">
+                  <summary className="text-xs text-white/50 cursor-pointer hover:text-white/70 transition-colors">
+                    Ver detalle completo ({gastosNoPlanificados.length} gastos)
+                  </summary>
+                  <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
+                    {gastosNoPlanificados.sort((a, b) => b.monto - a.monto).map(g => (
+                      <div key={g.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg text-sm">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-white truncate block">{g.descripcion}</span>
+                          <span className="text-white/40 text-xs">
+                            {new Date(g.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} • {categoriaLabels[g.categoria] || g.categoria}
+                          </span>
+                        </div>
+                        <span className="text-orange-400 font-medium ml-2">{formatMoney(g.monto)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+
+                {/* Mensaje informativo */}
+                <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+                  <p className="text-xs text-orange-300">
+                    Estos gastos no estaban contemplados en el presupuesto original.
+                    Aunque están en sus categorías correctas, representan un exceso sobre lo planeado.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ============ MODAL: GASTOS NO RECONOCIDOS ============ */}
       {showNoReconocidos && (

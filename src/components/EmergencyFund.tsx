@@ -51,7 +51,7 @@ export default function EmergencyFund({ compact = false, className = '' }: Emerg
       porcentaje: pct,
       status: stat,
     };
-  }, [gastos]);
+  }, [gastos, selectedMonth]);
 
   const statusConfig = {
     healthy: {
