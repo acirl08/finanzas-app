@@ -5,6 +5,7 @@ import { AlertTriangle, Clock, X, Briefcase, Calendar, Target } from 'lucide-rea
 import { INGRESO_MENSUAL, deudasIniciales, calcularProyeccionDeudas, calcularTotales } from '@/lib/data';
 import { subscribeToIngresos, Ingreso } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
+import { useMonth } from '@/contexts/MonthContext';
 
 interface SpendingFrictionModalProps {
   isOpen: boolean;
@@ -51,17 +52,18 @@ export default function SpendingFrictionModal({
   const [canConfirm, setCanConfirm] = useState(false);
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
 
+  const { selectedMonth } = useMonth();
+
   useEffect(() => {
     const unsub = subscribeToIngresos(setIngresos);
     return () => unsub();
   }, []);
 
-  // Calcular ingreso mensual real
+  // Calcular ingreso mensual real (usando mes seleccionado)
   const ingresoMensual = useMemo(() => {
-    const mesActual = new Date().toISOString().slice(0, 7);
-    const total = ingresos.filter(i => i.fecha.startsWith(mesActual)).reduce((sum, i) => sum + i.monto, 0);
+    const total = ingresos.filter(i => i.fecha.startsWith(selectedMonth)).reduce((sum, i) => sum + i.monto, 0);
     return total > 0 ? total : INGRESO_MENSUAL;
-  }, [ingresos]);
+  }, [ingresos, selectedMonth]);
 
   // Check if this is an essential category (no friction needed)
   const isEssential = ESSENTIAL_CATEGORIES.includes(categoria.toLowerCase());

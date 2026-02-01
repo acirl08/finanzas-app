@@ -8,8 +8,10 @@ import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { categoriaLabels } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useGastosDelMes, useGastosPorCategoria } from '@/hooks/useGastosFilters';
+import { useMonth } from '@/contexts/MonthContext';
 
 export default function RegistrarPage() {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdvancedForm, setShowAdvancedForm] = useState(false);
@@ -22,8 +24,8 @@ export default function RegistrarPage() {
     return () => unsubscribe();
   }, []);
 
-  // Usar hooks centralizados
-  const gastosData = useGastosDelMes(gastos);
+  // Usar hooks centralizados CON el mes seleccionado
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
   const categoriaData = useGastosPorCategoria(gastosData.gastosVariables);
 
   const today = new Date();

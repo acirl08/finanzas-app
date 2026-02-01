@@ -96,11 +96,22 @@ export function calcularTotal(gastos: Gasto[]): number {
 export function useGastosDelMes(gastos: Gasto[], mes?: string) {
   return useMemo(() => {
     const mesTarget = mes || getMesActual();
-    const hoy = getHoy();
+    const mesActualSistema = getMesActual();
+    const esMesActual = mesTarget === mesActualSistema;
+
+    // Calcular días basándose en el MES SELECCIONADO, no en el mes actual del sistema
+    const [year, month] = mesTarget.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate(); // Días del mes seleccionado
+
+    // Si es el mes actual, usar el día de hoy. Si es un mes pasado, usar el último día del mes
     const today = new Date();
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const dayOfMonth = today.getDate();
-    const daysRemaining = Math.max(1, daysInMonth - dayOfMonth + 1);
+    const dayOfMonth = esMesActual ? today.getDate() : daysInMonth;
+    const daysRemaining = esMesActual ? Math.max(1, daysInMonth - dayOfMonth + 1) : 1;
+
+    // hoy: si es mes actual usa hoy, si es mes pasado usa último día del mes
+    const hoy = esMesActual
+      ? today.toISOString().split('T')[0]
+      : `${mesTarget}-${String(daysInMonth).padStart(2, '0')}`;
 
     // Gastos del mes
     const gastosDelMes = filtrarGastosDelMes(gastos, mesTarget);

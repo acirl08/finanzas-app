@@ -6,8 +6,10 @@ import { presupuestosPersonales, PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 import { useGastosPorTitular } from '@/hooks/useGastosFilters';
+import { useMonth } from '@/contexts/MonthContext';
 
 export default function PresupuestosPersonales() {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,8 +23,8 @@ export default function PresupuestosPersonales() {
     return () => unsubscribe();
   }, []);
 
-  // Usar hook centralizado
-  const titularData = useGastosPorTitular(gastos);
+  // Usar hook centralizado CON el mes seleccionado
+  const titularData = useGastosPorTitular(gastos, selectedMonth);
 
   // Calcular gastos por titular usando el hook
   const gastosPorTitular = {

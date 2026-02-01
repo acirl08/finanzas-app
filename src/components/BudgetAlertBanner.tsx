@@ -5,12 +5,15 @@ import { AlertTriangle, X, List, Target, Pause, TrendingDown } from 'lucide-reac
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
+import { useMonth } from '@/contexts/MonthContext';
+import { useGastosDelMes } from '@/hooks/useGastosFilters';
 
 interface BudgetAlertBannerProps {
   onDismiss?: () => void;
 }
 
 export default function BudgetAlertBanner({ onDismiss }: BudgetAlertBannerProps) {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -23,32 +26,21 @@ export default function BudgetAlertBanner({ onDismiss }: BudgetAlertBannerProps)
     return () => unsubscribe();
   }, []);
 
+  // Usar hook centralizado CON el mes seleccionado
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
+
   // Memoized calculations
   const alertData = useMemo(() => {
-    const today = new Date();
-    const mesActual = today.toISOString().slice(0, 7);
-    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
-
-    // Solo gastos VARIABLES (no fijos, no vales, no imprevistos) afectan el presupuesto de $15,000
-    const gastosVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
-    const totalGastado = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
-
-    // Calculate percentage
-    const porcentaje = PRESUPUESTO_VARIABLE > 0 ? (totalGastado / PRESUPUESTO_VARIABLE) * 100 : 0;
-
-    // Days remaining (including today)
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const dayOfMonth = today.getDate();
-    const daysRemaining = Math.max(1, daysInMonth - dayOfMonth + 1);
+    const { totalVariables, porcentajeVariables, daysRemaining } = gastosData;
 
     // Determine alert level
     let alertLevel: 'critical' | 'danger' | 'warning' | null = null;
-    if (porcentaje >= 100) alertLevel = 'critical';
-    else if (porcentaje >= 90) alertLevel = 'danger';
-    else if (porcentaje >= 70) alertLevel = 'warning';
+    if (porcentajeVariables >= 100) alertLevel = 'critical';
+    else if (porcentajeVariables >= 90) alertLevel = 'danger';
+    else if (porcentajeVariables >= 70) alertLevel = 'warning';
 
-    return { totalGastado, porcentaje, daysRemaining, alertLevel };
-  }, [gastos]);
+    return { totalGastado: totalVariables, porcentaje: porcentajeVariables, daysRemaining, alertLevel };
+  }, [gastosData]);
 
   const { totalGastado, porcentaje, daysRemaining, alertLevel } = alertData;
 

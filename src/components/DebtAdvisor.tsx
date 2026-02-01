@@ -7,6 +7,7 @@ import { INGRESO_MENSUAL, calcularGastosFijos } from '@/lib/data';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { formatMoney } from '@/lib/utils';
 import { Deuda } from '@/types';
+import { useMonth } from '@/contexts/MonthContext';
 
 interface DebtAnalysisResult {
   analisis: string;
@@ -18,6 +19,7 @@ interface DebtAnalysisResult {
 }
 
 export default function DebtAdvisor() {
+  const { selectedMonth } = useMonth();
   const [deudas, setDeudas] = useState<Deuda[]>([]);
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,10 +47,9 @@ export default function DebtAdvisor() {
     const totales = calcularTotalesFromDeudas(deudas);
     const gastosFijos = calcularGastosFijos();
 
-    // Calcular ingresos reales del mes actual
-    const mesActual = new Date().toISOString().slice(0, 7);
+    // Calcular ingresos reales del mes seleccionado
     const ingresosDelMes = ingresos
-      .filter(i => i.fecha.startsWith(mesActual))
+      .filter(i => i.fecha.startsWith(selectedMonth))
       .reduce((sum, i) => sum + i.monto, 0);
 
     // Usar ingresos reales si hay, sino el fijo como fallback
@@ -80,7 +81,7 @@ export default function DebtAdvisor() {
       interesesMensuales,
       cantidadDeudas: deudas.filter(d => !d.liquidada).length,
     };
-  }, [deudas, ingresos]);
+  }, [deudas, ingresos, selectedMonth]);
 
   const runAnalysis = async () => {
     setLoading(true);

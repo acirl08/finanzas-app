@@ -7,8 +7,10 @@ import { PRESUPUESTO_VARIABLE, VALES_DESPENSA } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { getTotalAhorroMensual } from './SavingsGoals';
 import { useGastosDelMes, useRacha } from '@/hooks/useGastosFilters';
+import { useMonth } from '@/contexts/MonthContext';
 
 export default function DailyBudgetCard() {
+  const { selectedMonth, isCurrentMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
   const [ahorroMensual, setAhorroMensual] = useState(0);
@@ -45,8 +47,8 @@ export default function DailyBudgetCard() {
     };
   }, []);
 
-  // Usar hooks centralizados
-  const gastosData = useGastosDelMes(gastos);
+  // Usar hooks centralizados CON el mes seleccionado
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
   const rachaData = useRacha(gastos);
 
   // Memoized calculations to prevent unnecessary re-renders

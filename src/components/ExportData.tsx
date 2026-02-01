@@ -6,6 +6,7 @@ import { subscribeToGastos, Gasto, subscribeToDeudas } from '@/lib/firestore';
 import { deudasIniciales, categoriaLabels, presupuestosPersonales, PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { Deuda } from '@/types';
+import { useMonth } from '@/contexts/MonthContext';
 
 interface ExportDataProps {
   className?: string;
@@ -21,14 +22,19 @@ function formatDate(dateStr: string) {
 }
 
 export default function ExportData({ className = '' }: ExportDataProps) {
+  const { selectedMonth: globalSelectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    return new Date().toISOString().slice(0, 7);
-  });
+  // Usar el mes global como valor inicial
+  const [selectedMonth, setSelectedMonth] = useState(globalSelectedMonth);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
+
+  // Sincronizar con el mes global cuando cambie
+  useEffect(() => {
+    setSelectedMonth(globalSelectedMonth);
+  }, [globalSelectedMonth]);
 
   useEffect(() => {
     const unsubGastos = subscribeToGastos((g) => {

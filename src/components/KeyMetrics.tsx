@@ -33,15 +33,19 @@ export default function KeyMetrics() {
   const gastosData = useGastosDelMes(gastos, selectedMonth);
 
   const dailyBudget = useMemo(() => {
-    const { totalVariables, disponibleVariables, daysRemaining, dayOfMonth, daysInMonth } = gastosData;
+    const { totalVariables, disponibleVariables, daysRemaining, dayOfMonth, daysInMonth, hoy: hoyDelMes } = gastosData;
 
     // Presupuesto diario basado en lo que queda
     const presupuestoDiario = Math.max(0, Math.floor(disponibleVariables / daysRemaining));
 
-    // Gastado hoy
-    const hoy = new Date().toISOString().split('T')[0];
+    // Para meses pasados, calcular el último día del mes seleccionado
+    // Para mes actual, usar hoy
+    const fechaParaHoy = isCurrentMonth
+      ? new Date().toISOString().split('T')[0]
+      : `${selectedMonth}-${String(daysInMonth).padStart(2, '0')}`; // último día del mes
+
     const gastosHoy = gastos.filter(g =>
-      g.fecha === hoy && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
+      g.fecha === fechaParaHoy && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
     );
     const gastadoHoy = gastosHoy.reduce((sum, g) => sum + g.monto, 0);
     const disponibleHoy = presupuestoDiario - gastadoHoy;
@@ -57,8 +61,9 @@ export default function KeyMetrics() {
       disponibleHoy,
       status,
       transaccionesHoy: gastosHoy.length,
+      esMesPasado: !isCurrentMonth,
     };
-  }, [gastos, gastosData]);
+  }, [gastos, gastosData, isCurrentMonth, selectedMonth]);
 
   const deudaData = useMemo(() => {
     const totales = calcularTotalesFromDeudas(deudas);

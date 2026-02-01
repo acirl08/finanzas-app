@@ -6,6 +6,8 @@ import { addGasto, subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE, metodosPago } from '@/lib/data';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useMonth } from '@/contexts/MonthContext';
+import { useGastosDelMes } from '@/hooks/useGastosFilters';
 
 // 6 categorías simplificadas para quick-add
 const QUICK_CATEGORIES = [
@@ -26,6 +28,7 @@ interface QuickAddProps {
 }
 
 export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: QuickAddProps) {
+  const { selectedMonth, isCurrentMonth } = useMonth();
   const [monto, setMonto] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [titular, setTitular] = useState<'alejandra' | 'ricardo' | 'compartido'>(defaultTitular);
@@ -54,27 +57,17 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
     return () => clearTimeout(timer);
   }, []);
 
+  // Usar hook centralizado para cálculos de presupuesto
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
+
   // Calcular presupuesto diario y si excede
   const budgetInfo = useMemo(() => {
-    const today = new Date();
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const dayOfMonth = today.getDate();
-    const daysRemaining = Math.max(1, daysInMonth - dayOfMonth + 1);
-    const mesActual = today.toISOString().slice(0, 7);
-    const hoy = today.toISOString().split('T')[0];
+    const { totalVariables, disponibleVariables, daysRemaining, totalHoy } = gastosData;
 
-    const gastosVariables = gastos.filter(g =>
-      g.fecha.startsWith(mesActual) && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
-    );
-    const totalMes = gastosVariables.reduce((sum, g) => sum + g.monto, 0);
-    const disponible = PRESUPUESTO_VARIABLE - totalMes;
-    const presupuestoDiario = Math.max(0, Math.floor(disponible / daysRemaining));
+    const presupuestoDiario = Math.max(0, Math.floor(disponibleVariables / daysRemaining));
 
-    const gastosHoy = gastosVariables.filter(g => g.fecha === hoy);
-    const totalHoy = gastosHoy.reduce((sum, g) => sum + g.monto, 0);
-
-    return { presupuestoDiario, totalHoy, disponible };
-  }, [gastos]);
+    return { presupuestoDiario, totalHoy, disponible: disponibleVariables };
+  }, [gastosData]);
 
   const handleSubmit = async () => {
     if (!monto || !selectedCategory) return;

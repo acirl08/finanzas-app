@@ -120,7 +120,7 @@ export default function CategoryBudgets() {
       };
     }).filter(c => !c.isVales); // Excluir vales del tracking
 
-  }, [gastos, budgets]);
+  }, [gastos, budgets, selectedMonth]);
 
   // Mostrar alertas cuando se pasan del 80% o 100%
   useEffect(() => {

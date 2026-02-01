@@ -7,6 +7,7 @@ import { presupuestosPersonales, categoriasEsenciales, categoriasVales, categori
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { formatMoney } from '@/lib/utils';
 import { Deuda } from '@/types';
+import { useMonth } from '@/contexts/MonthContext';
 
 interface AnalysisResult {
   analisis: string;
@@ -17,6 +18,7 @@ interface AnalysisResult {
 }
 
 export default function FinancialAdvisor() {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [deudas, setDeudas] = useState<Deuda[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,12 +46,9 @@ export default function FinancialAdvisor() {
 
   // Calcular datos para el análisis
   const financialData = useMemo(() => {
-    const today = new Date();
-    const mesActual = today.toISOString().slice(0, 7);
-
-    // Filtrar gastos del mes (solo gustos, no esenciales ni vales ni no_reconocido)
+    // Usar el mes seleccionado
     const gastosDelMes = gastos.filter(g =>
-      g.fecha.startsWith(mesActual) &&
+      g.fecha.startsWith(selectedMonth) &&
       !g.esFijo &&
       !g.conVales &&
       g.categoria !== 'imprevistos' &&
@@ -80,7 +79,7 @@ export default function FinancialAdvisor() {
       deudaTotal: totalesDeuda.deudaTotal,
       presupuestos: presupuestosPersonales,
     };
-  }, [gastos, deudas]);
+  }, [gastos, deudas, selectedMonth]);
 
   const runAnalysis = async () => {
     setLoading(true);

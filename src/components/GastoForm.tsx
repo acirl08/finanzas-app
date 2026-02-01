@@ -14,6 +14,8 @@ import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { PlusCircle, X, CreditCard, Wallet, ChevronDown, ShoppingCart, Utensils, Car, Heart, Sparkles, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import SpendingFrictionModal from './SpendingFrictionModal';
+import { useMonth } from '@/contexts/MonthContext';
+import { useGastosDelMes } from '@/hooks/useGastosFilters';
 
 interface GastoFormProps {
   onClose?: () => void;
@@ -34,6 +36,7 @@ const QUICK_CATEGORIES = [
 const QUICK_AMOUNTS = [50, 100, 200, 500];
 
 export default function GastoForm({ onClose, onSubmit }: GastoFormProps) {
+  const { selectedMonth } = useMonth();
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
     categoria: 'super',
@@ -64,26 +67,16 @@ export default function GastoForm({ onClose, onSubmit }: GastoFormProps) {
     }, 100);
   }, []);
 
+  // Usar hook centralizado para cálculos de presupuesto
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
+
   // Memoized budget calculations for friction modal
   const { presupuestoDiario, totalGastadoHoy } = useMemo(() => {
-    const today = new Date();
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const dayOfMonth = today.getDate();
-    const daysRemaining = Math.max(1, daysInMonth - dayOfMonth + 1);
-
-    const mesActual = today.toISOString().slice(0, 7);
-    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
-    const totalGastadoMes = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
-
-    const hoy = today.toISOString().split('T')[0];
-    const gastosHoyFiltered = gastos.filter(g => g.fecha === hoy);
-    const totalGastadoHoy = gastosHoyFiltered.reduce((sum, g) => sum + g.monto, 0);
-
-    const presupuestoRestante = PRESUPUESTO_VARIABLE - totalGastadoMes;
-    const presupuestoDiario = Math.max(0, Math.floor(presupuestoRestante / daysRemaining));
-
-    return { presupuestoDiario, totalGastadoHoy };
-  }, [gastos]);
+    return {
+      presupuestoDiario: gastosData.presupuestoDiario,
+      totalGastadoHoy: gastosData.totalHoy,
+    };
+  }, [gastosData]);
 
   const tarjetas = [
     'Efectivo',

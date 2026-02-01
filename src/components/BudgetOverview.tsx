@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ShoppingCart, Wallet, Sparkles, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import {
@@ -15,6 +15,7 @@ import {
   categoriaLabels,
 } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
+import { useMonth, formatMonth } from '@/contexts/MonthContext';
 
 interface BudgetCardProps {
   title: string;
@@ -119,6 +120,7 @@ function BudgetCard({ title, icon, presupuesto, gastado, color, bgGradient, deta
 }
 
 export default function BudgetOverview() {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -130,10 +132,12 @@ export default function BudgetOverview() {
     return () => unsubscribe();
   }, []);
 
-  // Filtrar gastos del mes actual
-  const today = new Date();
-  const mesActual = today.toISOString().slice(0, 7);
-  const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
+  // Filtrar gastos del mes seleccionado
+  const gastosDelMes = useMemo(() =>
+    gastos.filter(g => g.fecha.startsWith(selectedMonth)),
+    [gastos, selectedMonth]
+  );
+  const nombreMes = formatMonth(selectedMonth);
 
   // Calcular gastos por tipo
   const gastosVales = gastosDelMes
@@ -214,7 +218,7 @@ export default function BudgetOverview() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white">Tu Presupuesto del Mes</h2>
         <span className="text-sm text-white/40">
-          {today.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
+          {nombreMes}
         </span>
       </div>
 

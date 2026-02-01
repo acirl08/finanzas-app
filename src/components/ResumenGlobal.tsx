@@ -25,6 +25,7 @@ import {
   presupuestosPersonales
 } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
+import { useMonth } from '@/contexts/MonthContext';
 
 // Asignar titular a gastos fijos (Alejandra paga todo pero es responsable de gestionar)
 const gastosFijosConTitular = [
@@ -37,6 +38,7 @@ const gastosFijosConTitular = [
 ];
 
 export default function ResumenGlobal() {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSection, setExpandedSection] = useState<string | null>('alejandra');
@@ -50,9 +52,8 @@ export default function ResumenGlobal() {
   }, []);
 
   const resumen = useMemo(() => {
-    const today = new Date();
-    const mesActual = today.toISOString().slice(0, 7);
-    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
+    // Usar el mes seleccionado
+    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(selectedMonth));
 
     // Gastos variables por titular (sin imprevistos)
     const gastosVariables = gastosDelMes.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos');
@@ -123,7 +124,7 @@ export default function ResumenGlobal() {
         detalle: gastosImprevistos,
       },
     };
-  }, [gastos]);
+  }, [gastos, selectedMonth]);
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);

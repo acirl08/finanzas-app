@@ -8,6 +8,7 @@ import { PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import SwipeableGastoItem from '@/components/SwipeableGastoItem';
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
+import { useMonth, formatMonth } from '@/contexts/MonthContext';
 
 function getCategoryIcon(categoria: string) {
   const icons: Record<string, string> = {
@@ -47,6 +48,7 @@ function formatDate(fecha: string) {
 }
 
 export default function GastosPage() {
+  const { selectedMonth } = useMonth();
   const [filtro, setFiltro] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [gastos, setGastos] = useState<Gasto[]>([]);
@@ -61,9 +63,9 @@ export default function GastosPage() {
     return () => unsubscribe();
   }, []);
 
-  // Usar hook centralizado
-  const gastosData = useGastosDelMes(gastos);
-  const today = new Date();
+  // Usar hook centralizado CON el mes seleccionado
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
+  const nombreMes = formatMonth(selectedMonth);
 
   const gastosFiltrados = gastosData.gastosVariables
     .filter(g => filtro === 'todos' || g.titular === filtro)
@@ -144,7 +146,7 @@ export default function GastosPage() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Historial de Gastos</h1>
-          <p className="text-white/50">Gastos variables de {today.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</p>
+          <p className="text-white/50">Gastos variables de {nombreMes}</p>
         </div>
         <Link
           href="/registrar"
@@ -273,7 +275,7 @@ export default function GastosPage() {
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">Sin gastos este mes</h3>
           <p className="text-white/50 mb-6 max-w-md mx-auto">
-            No has registrado gastos variables en {today.toLocaleDateString('es-MX', { month: 'long' })}.
+            No has registrado gastos variables en {nombreMes}.
             Registra tus gastos para llevar un mejor control de tu dinero.
           </p>
           <Link

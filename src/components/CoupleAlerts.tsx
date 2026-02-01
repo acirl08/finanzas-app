@@ -7,7 +7,8 @@ import { presupuestosPersonales } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { toast } from 'sonner';
-import { useGastosPorTitular } from '@/hooks/useGastosFilters';
+import { useGastosPorTitular, useGastosDelMes } from '@/hooks/useGastosFilters';
+import { useMonth } from '@/contexts/MonthContext';
 
 interface CoupleAlertsProps {
   className?: string;
@@ -51,6 +52,7 @@ const TITULAR_CONFIG = {
 };
 
 export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
+  const { selectedMonth, isCurrentMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
@@ -73,16 +75,15 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
     return () => unsubscribe();
   }, []);
 
-  // Usar hook centralizado
-  const titularData = useGastosPorTitular(gastos);
+  // Usar hooks centralizados CON el mes seleccionado
+  const titularData = useGastosPorTitular(gastos, selectedMonth);
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
 
   // Generar alertas basadas en el estado actual
   const alerts = useMemo(() => {
-    const today = new Date();
-    const mesActual = today.toISOString().slice(0, 7);
-    const diaActual = today.getDate();
-    const diasEnMes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const porcentajeMes = (diaActual / diasEnMes) * 100;
+    // Usar datos del mes seleccionado, no del sistema
+    const { daysInMonth, dayOfMonth } = gastosData;
+    const porcentajeMes = (dayOfMonth / daysInMonth) * 100;
 
     // Usar datos del hook centralizado
     const gastosPorTitular = {
@@ -115,7 +116,7 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
 
       if (pct >= 100) {
         newAlerts.push({
-          id: `${titular}-over-${mesActual}`,
+          id: `${titular}-over-${selectedMonth}`,
           type: 'danger',
           titular,
           message: `${config.name} se pasó del presupuesto`,
@@ -124,7 +125,7 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
         });
       } else if (pct >= 80) {
         newAlerts.push({
-          id: `${titular}-warning-${mesActual}`,
+          id: `${titular}-warning-${selectedMonth}`,
           type: 'warning',
           titular,
           message: `${config.name} está al ${pct.toFixed(0)}%`,
@@ -144,7 +145,7 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
       const quienMas = gastosAle > gastosRic ? 'alejandra' : 'ricardo';
       const quienMenos = gastosAle > gastosRic ? 'ricardo' : 'alejandra';
       newAlerts.push({
-        id: `desbalance-${mesActual}`,
+        id: `desbalance-${selectedMonth}`,
         type: 'info',
         titular: 'both',
         message: `${TITULAR_CONFIG[quienMas].name} lleva ${formatMoney(diferencia)} más`,
@@ -156,9 +157,9 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
     // Alerta positiva si ambos van bien
     const ambosVanBien = porcentajePorTitular.alejandra <= porcentajeMes &&
                          porcentajePorTitular.ricardo <= porcentajeMes;
-    if (ambosVanBien && diaActual > 7) {
+    if (ambosVanBien && dayOfMonth > 7) {
       newAlerts.push({
-        id: `both-good-${mesActual}`,
+        id: `both-good-${selectedMonth}`,
         type: 'success',
         titular: 'both',
         message: '¡Van muy bien los dos!',
@@ -170,7 +171,7 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
     // Alerta si uno está muy bien y puede ayudar al otro
     if (porcentajePorTitular.alejandra <= 50 && porcentajePorTitular.ricardo >= 80) {
       newAlerts.push({
-        id: `ale-can-help-${mesActual}`,
+        id: `ale-can-help-${selectedMonth}`,
         type: 'info',
         titular: 'both',
         message: 'Ale puede cubrir gastos compartidos',
@@ -179,7 +180,7 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
       });
     } else if (porcentajePorTitular.ricardo <= 50 && porcentajePorTitular.alejandra >= 80) {
       newAlerts.push({
-        id: `ric-can-help-${mesActual}`,
+        id: `ric-can-help-${selectedMonth}`,
         type: 'info',
         titular: 'both',
         message: 'Ricardo puede cubrir gastos compartidos',
@@ -189,7 +190,7 @@ export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
     }
 
     return newAlerts;
-  }, [titularData]);
+  }, [titularData, gastosData, selectedMonth]);
 
   // Mostrar toasts para alertas nuevas de tipo danger/warning
   useEffect(() => {

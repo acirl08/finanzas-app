@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Calendar, ArrowRight } from 'lucide-react';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
+import { useMonth } from '@/contexts/MonthContext';
 
 function formatPercent(value: number) {
   const sign = value > 0 ? '+' : '';
@@ -28,6 +29,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default function MonthComparison() {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -41,20 +43,28 @@ export default function MonthComparison() {
   }, []);
 
   const comparisonData = useMemo(() => {
-    const today = new Date();
-    const mesActual = today.toISOString().slice(0, 7); // YYYY-MM
+    // Usar el mes seleccionado en lugar del mes actual del sistema
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const mesActual = selectedMonth;
 
-    // Mes anterior
-    const mesAnteriorDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const mesAnterior = mesAnteriorDate.toISOString().slice(0, 7);
+    // Mes anterior al seleccionado
+    // JavaScript Date usa meses 0-indexed, así que month-1 es el mes actual, month-2 es el anterior
+    const mesAnteriorDate = new Date(year, month - 2, 1);
+    const mesAnterior = `${mesAnteriorDate.getFullYear()}-${String(mesAnteriorDate.getMonth() + 1).padStart(2, '0')}`;
 
     // Nombres de los meses
-    const nombreMesActual = today.toLocaleDateString('es-MX', { month: 'long' });
+    const mesActualDate = new Date(year, month - 1, 1);
+    const nombreMesActual = mesActualDate.toLocaleDateString('es-MX', { month: 'long' });
     const nombreMesAnterior = mesAnteriorDate.toLocaleDateString('es-MX', { month: 'long' });
 
     // Día actual del mes (para comparación proporcional)
-    const diaActual = today.getDate();
-    const diasEnMesAnterior = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+    // Si es el mes actual del sistema, usar el día de hoy; si es un mes pasado, usar el último día
+    const today = new Date();
+    const mesActualSistema = today.toISOString().slice(0, 7);
+    const esMesActualSistema = selectedMonth === mesActualSistema;
+    const diasEnMesSeleccionado = new Date(year, month, 0).getDate();
+    const diaActual = esMesActualSistema ? today.getDate() : diasEnMesSeleccionado;
+    const diasEnMesAnterior = new Date(year, month - 1, 0).getDate();
 
     // Filtrar gastos por mes (solo variables, no fijos, no vales, no imprevistos)
     const gastosActual = gastos.filter(g =>
@@ -149,7 +159,7 @@ export default function MonthComparison() {
       insight,
       hayDatosAnterior: gastosAnterior.length > 0,
     };
-  }, [gastos]);
+  }, [gastos, selectedMonth]);
 
   if (loading) {
     return <div className="glass-card animate-pulse h-32" />;

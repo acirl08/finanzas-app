@@ -11,6 +11,7 @@ import { formatMoney } from '@/lib/utils';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { Deuda } from '@/types';
 import { useGastosDelMes, useGastosPorTitular, filtrarImprevistos, calcularTotal } from '@/hooks/useGastosFilters';
+import { useMonth } from '@/contexts/MonthContext';
 import Link from 'next/link';
 
 interface Alert {
@@ -31,6 +32,7 @@ interface UnifiedAlertsProps {
 }
 
 export default function UnifiedAlerts({ maxAlerts = 5, compact = false, className = '' }: UnifiedAlertsProps) {
+  const { selectedMonth, isCurrentMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
   const [loading, setLoading] = useState(true);
@@ -56,18 +58,15 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
     };
   }, []);
 
-  // Usar hooks centralizados
-  const gastosData = useGastosDelMes(gastos);
-  const titularData = useGastosPorTitular(gastos);
+  // Usar hooks centralizados CON mes seleccionado
+  const gastosData = useGastosDelMes(gastos, selectedMonth);
+  const titularData = useGastosPorTitular(gastos, selectedMonth);
 
   // Generate all alerts
   const alerts = useMemo(() => {
-    const today = new Date();
-    const mesActual = today.toISOString().slice(0, 7);
-    const diaActual = today.getDate();
-    const diasEnMes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const diasRestantes = Math.max(1, diasEnMes - diaActual + 1);
-    const porcentajeMes = (diaActual / diasEnMes) * 100;
+    // Usar datos del mes seleccionado, no del mes actual del sistema
+    const { daysInMonth, dayOfMonth, daysRemaining } = gastosData;
+    const porcentajeMes = (dayOfMonth / daysInMonth) * 100;
 
     const allAlerts: Alert[] = [];
 
@@ -77,7 +76,7 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
     // Critical: Over budget
     if (porcentajeVariables >= 100) {
       allAlerts.push({
-        id: `budget-over-${mesActual}`,
+        id: `budget-over-${selectedMonth}`,
         priority: 1,
         type: 'danger',
         category: 'budget',
@@ -90,12 +89,12 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
     // Danger: 90%+ used
     else if (porcentajeVariables >= 90) {
       allAlerts.push({
-        id: `budget-danger-${mesActual}`,
+        id: `budget-danger-${selectedMonth}`,
         priority: 1,
         type: 'danger',
         category: 'budget',
         title: 'Presupuesto al límite',
-        message: `Has usado ${porcentajeVariables.toFixed(0)}% y quedan ${diasRestantes} días.`,
+        message: `Has usado ${porcentajeVariables.toFixed(0)}% y quedan ${daysRemaining} días.`,
         action: { label: 'Revisar', href: '/gastos' },
         dismissible: false,
       });
@@ -103,7 +102,7 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
     // Warning: 70%+ used
     else if (porcentajeVariables >= 70) {
       allAlerts.push({
-        id: `budget-warning-${mesActual}`,
+        id: `budget-warning-${selectedMonth}`,
         priority: 2,
         type: 'warning',
         category: 'budget',
@@ -128,7 +127,7 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
 
       if (pct >= 100) {
         allAlerts.push({
-          id: `${titular}-over-${mesActual}`,
+          id: `${titular}-over-${selectedMonth}`,
           priority: 1,
           type: 'danger',
           category: 'couple',
@@ -138,7 +137,7 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
         });
       } else if (pct >= 80) {
         allAlerts.push({
-          id: `${titular}-warning-${mesActual}`,
+          id: `${titular}-warning-${selectedMonth}`,
           priority: 2,
           type: 'warning',
           category: 'couple',
@@ -158,7 +157,7 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
     if (promedioGastos > 1000 && diferencia > promedioGastos * 0.5) {
       const quienMas = gastosAle > gastosRic ? 'Ale' : 'Ricardo';
       allAlerts.push({
-        id: `imbalance-${mesActual}`,
+        id: `imbalance-${selectedMonth}`,
         priority: 3,
         type: 'info',
         category: 'couple',
@@ -176,7 +175,7 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
 
     if (porcentajeImprevistos >= 80) {
       allAlerts.push({
-        id: `imprevistos-warning-${mesActual}`,
+        id: `imprevistos-warning-${selectedMonth}`,
         priority: 2,
         type: 'warning',
         category: 'emergency',
@@ -219,9 +218,9 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
     // ========== POSITIVE ALERTS ==========
     // Both under budget
     const ambosVanBien = porcentajes.alejandra <= porcentajeMes && porcentajes.ricardo <= porcentajeMes;
-    if (ambosVanBien && diaActual > 7) {
+    if (ambosVanBien && dayOfMonth > 7) {
       allAlerts.push({
-        id: `both-good-${mesActual}`,
+        id: `both-good-${selectedMonth}`,
         priority: 4,
         type: 'success',
         category: 'couple',
@@ -232,14 +231,14 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
     }
 
     // Budget surplus near end of month
-    if (diasRestantes <= 5 && disponibleVariables > PRESUPUESTO_VARIABLE * 0.2) {
+    if (daysRemaining <= 5 && disponibleVariables > PRESUPUESTO_VARIABLE * 0.2) {
       allAlerts.push({
-        id: `surplus-${mesActual}`,
+        id: `surplus-${selectedMonth}`,
         priority: 3,
         type: 'info',
         category: 'general',
         title: 'Presupuesto sobrante',
-        message: `Quedan ${formatMoney(disponibleVariables)} y ${diasRestantes} días. Consideren abonar a deudas.`,
+        message: `Quedan ${formatMoney(disponibleVariables)} y ${daysRemaining} días. Consideren abonar a deudas.`,
         action: { label: 'Ver deudas', href: '/deudas' },
         dismissible: true,
       });
@@ -247,7 +246,7 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
 
     // Sort by priority
     return allAlerts.sort((a, b) => a.priority - b.priority);
-  }, [gastosData, titularData, deudas]);
+  }, [gastosData, titularData, deudas, selectedMonth]);
 
   const dismissAlert = (alertId: string) => {
     const newDismissed = new Set([...dismissedAlerts, alertId]);

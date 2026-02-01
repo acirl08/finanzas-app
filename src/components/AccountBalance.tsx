@@ -1,22 +1,24 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Wallet, TrendingUp, TrendingDown, Building2, CreditCard, Plus, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Building2, CreditCard, Plus, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 import { subscribeToGastos, subscribeToIngresos, Gasto, Ingreso } from '@/lib/firestore';
 import { cuentasBanco } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
+import { useMonth } from '@/contexts/MonthContext';
 
 interface SaldoCuenta {
   id: string;
   nombre: string;
-  tipo: 'debito' | 'credito';
-  titular: 'alejandra' | 'ricardo';
+  tipo: 'debito' | 'credito' | 'sin_asignar';
+  titular: 'alejandra' | 'ricardo' | 'compartido';
   ingresos: number;
   egresos: number;
   balance: number;
 }
 
 export default function AccountBalance() {
+  const { selectedMonth } = useMonth();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [ingresos, setIngresos] = useState<Ingreso[]>([]);
   const [expanded, setExpanded] = useState(true);
@@ -41,11 +43,13 @@ export default function AccountBalance() {
     };
   }, []);
 
-  // Calcular balance por cuenta del mes actual
+  // Calcular balance por cuenta del mes seleccionado
   const balancesPorCuenta = useMemo(() => {
-    const mesActual = new Date().toISOString().slice(0, 7);
-    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
-    const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(mesActual));
+    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(selectedMonth));
+    const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(selectedMonth));
+
+    // IDs de cuentas conocidas
+    const cuentasIds = cuentasBanco.map(c => c.id);
 
     const balances: SaldoCuenta[] = cuentasBanco.map(cuenta => {
       const egresosTotal = gastosDelMes
@@ -67,14 +71,29 @@ export default function AccountBalance() {
       };
     });
 
+    // Agregar gastos sin método de pago asignado
+    const gastosSinMetodo = gastosDelMes.filter(g => !g.metodoPago || !cuentasIds.includes(g.metodoPago));
+    const egresosSinMetodo = gastosSinMetodo.reduce((sum, g) => sum + g.monto, 0);
+
+    if (egresosSinMetodo > 0) {
+      balances.push({
+        id: 'sin_asignar',
+        nombre: 'Sin método asignado',
+        tipo: 'sin_asignar',
+        titular: 'compartido',
+        ingresos: 0,
+        egresos: egresosSinMetodo,
+        balance: -egresosSinMetodo,
+      });
+    }
+
     return balances;
-  }, [gastos, ingresos]);
+  }, [gastos, ingresos, selectedMonth]);
 
   // Totales generales
   const totales = useMemo(() => {
-    const mesActual = new Date().toISOString().slice(0, 7);
-    const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(mesActual));
-    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(mesActual));
+    const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(selectedMonth));
+    const gastosDelMes = gastos.filter(g => g.fecha.startsWith(selectedMonth));
 
     const totalIngresos = ingresosDelMes.reduce((sum, i) => sum + i.monto, 0);
     const totalEgresos = gastosDelMes.reduce((sum, g) => sum + g.monto, 0);
@@ -84,13 +103,14 @@ export default function AccountBalance() {
       egresos: totalEgresos,
       balance: totalIngresos - totalEgresos,
     };
-  }, [gastos, ingresos]);
+  }, [gastos, ingresos, selectedMonth]);
 
   // Separar por titular
   const balancesPorTitular = useMemo(() => {
     return {
       alejandra: balancesPorCuenta.filter(b => b.titular === 'alejandra'),
       ricardo: balancesPorCuenta.filter(b => b.titular === 'ricardo'),
+      sinAsignar: balancesPorCuenta.filter(b => b.id === 'sin_asignar'),
     };
   }, [balancesPorCuenta]);
 
@@ -182,6 +202,21 @@ export default function AccountBalance() {
                 ))}
               </div>
             </div>
+
+            {/* Sin asignar */}
+            {balancesPorTitular.sinAsignar.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-amber-400 mb-2 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                  Sin método de pago
+                </h4>
+                <div className="space-y-2">
+                  {balancesPorTitular.sinAsignar.map(cuenta => (
+                    <CuentaRow key={cuenta.id} cuenta={cuenta} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -197,13 +232,15 @@ function CuentaRow({ cuenta }: { cuenta: SaldoCuenta }) {
       <div className="flex items-center gap-3">
         {cuenta.tipo === 'debito' ? (
           <Building2 className="w-4 h-4 text-green-400" />
-        ) : (
+        ) : cuenta.tipo === 'credito' ? (
           <CreditCard className="w-4 h-4 text-orange-400" />
+        ) : (
+          <HelpCircle className="w-4 h-4 text-amber-400" />
         )}
         <div>
           <p className="text-sm font-medium text-white">{cuenta.nombre}</p>
           <p className="text-xs text-white/40">
-            {cuenta.tipo === 'debito' ? 'Débito' : 'Crédito'}
+            {cuenta.tipo === 'debito' ? 'Débito' : cuenta.tipo === 'credito' ? 'Crédito' : 'Gastos sin tarjeta asignada'}
           </p>
         </div>
       </div>
