@@ -183,6 +183,14 @@ export async function PUT(request: Request) {
       updateData.liquidada = Boolean(liquidada);
     }
 
+    if (body.pagoMinimo !== undefined) {
+      updateData.pagoMinimo = Number(body.pagoMinimo);
+    }
+
+    if (body.saldoInicial !== undefined) {
+      updateData.saldoInicial = Number(body.saldoInicial);
+    }
+
     await withTimeout(updateDoc(doc(db, 'deudas', deudaId), updateData), 5000);
 
     return NextResponse.json({ success: true, message: 'Deuda actualizada' });
