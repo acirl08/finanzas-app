@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { subscribeToGastos, Gasto } from '@/lib/firestore';
-import { PRESUPUESTO_VARIABLE } from '@/lib/data';
+import { PRESUPUESTO_GUSTOS } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
@@ -27,8 +27,8 @@ export default function HeroMetric() {
   const data = useMemo(() => {
     const { totalVariables, disponibleVariables, porcentajeVariables, daysInMonth, dayOfMonth, daysRemaining } = gastosData;
 
-    // Calcular si van bien según el día del mes
-    const presupuestoIdealHastaHoy = (PRESUPUESTO_VARIABLE / daysInMonth) * dayOfMonth;
+    // Calcular si van bien según el día del mes (solo gustos)
+    const presupuestoIdealHastaHoy = (PRESUPUESTO_GUSTOS / daysInMonth) * dayOfMonth;
     const diferencia = presupuestoIdealHastaHoy - totalVariables;
     const porcentajeDelMes = (dayOfMonth / daysInMonth) * 100;
 

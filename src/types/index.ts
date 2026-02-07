@@ -23,6 +23,7 @@ export interface Gasto {
   metodoPago?: string;
   planificado?: boolean;
   tarjeta?: string;
+  deudaId?: string; // Only for categoria === 'deuda'
 }
 
 export interface GastoFijo {

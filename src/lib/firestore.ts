@@ -41,6 +41,7 @@ export interface Gasto {
   conVales?: boolean; // true = se paga con vales de despensa (super, frutas)
   metodoPago?: string; // 'bbva' | 'nu_ricardo' | 'amex_platinum' | 'efectivo' | etc.
   planificado?: boolean; // false = gasto no estaba en presupuesto, true/undefined = planificado
+  deudaId?: string; // Only for categoria === 'deuda' - references deuda.id
   createdAt?: Timestamp;
 }
 

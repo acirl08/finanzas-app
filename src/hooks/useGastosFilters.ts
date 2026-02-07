@@ -118,40 +118,48 @@ export function useGastosDelMes(gastos: Gasto[], mes?: string) {
     const gastosDelMes = filtrarGastosDelMes(gastos, mesTarget);
 
     // Categorías de gastos
-    const gastosVariables = filtrarGastosVariables(gastosDelMes);
+    const gastosVariables = filtrarGastosVariables(gastosDelMes); // DEPRECATED: usar gastosGustos
+    const gastosGustos = filtrarGastosGustos(gastosDelMes); // Solo gustos para presupuesto personal
+    const gastosEsenciales = filtrarGastosEsenciales(gastosDelMes); // Esenciales compartidos
     const gastosConVales = filtrarGastosConVales(gastosDelMes);
     const gastosFijos = filtrarGastosFijos(gastosDelMes);
     const gastosImprevistos = filtrarImprevistos(gastosDelMes);
 
     // Totales
-    const totalVariables = calcularTotal(gastosVariables);
+    const totalGustos = calcularTotal(gastosGustos); // Solo gustos contra $7K presupuesto
+    const totalEsenciales = calcularTotal(gastosEsenciales); // Esenciales compartidos
+    const totalVariables = totalGustos + totalEsenciales; // Total variable = gustos + esenciales
     const totalVales = calcularTotal(gastosConVales);
     const totalFijos = calcularTotal(gastosFijos);
     const totalImprevistos = calcularTotal(gastosImprevistos);
     const totalMes = totalVariables + totalVales + totalFijos + totalImprevistos;
 
-    // Disponible
-    const disponibleVariables = PRESUPUESTO_VARIABLE - totalVariables;
+    // Disponible (SOLO GUSTOS cuentan contra presupuesto personal)
+    const disponibleGustos = PRESUPUESTO_GUSTOS - totalGustos;
+    const disponibleVariables = disponibleGustos; // Alias para compatibilidad
     const disponibleVales = VALES_DESPENSA - totalVales;
     const disponibleImprevistos = PRESUPUESTO_IMPREVISTOS - totalImprevistos;
 
     // Presupuesto diario
     const presupuestoDiario = Math.max(0, Math.floor(disponibleVariables / daysRemaining));
 
-    // Gastos de hoy
-    const gastosHoy = gastosVariables.filter(g => g.fecha === hoy);
+    // Gastos de hoy (SOLO GUSTOS)
+    const gastosHoy = gastosGustos.filter(g => g.fecha === hoy);
     const totalHoy = calcularTotal(gastosHoy);
     const disponibleHoy = Math.max(0, presupuestoDiario - totalHoy);
 
     // Porcentaje usado
-    const porcentajeVariables = (totalVariables / PRESUPUESTO_VARIABLE) * 100;
+    const porcentajeGustos = (totalGustos / PRESUPUESTO_GUSTOS) * 100;
+    const porcentajeVariables = porcentajeGustos; // Alias
     const porcentajeVales = (totalVales / VALES_DESPENSA) * 100;
     const porcentajeImprevistos = (totalImprevistos / PRESUPUESTO_IMPREVISTOS) * 100;
 
     return {
       // Listas de gastos
       gastosDelMes,
-      gastosVariables,
+      gastosVariables, // DEPRECATED: usar gastosGustos
+      gastosGustos, // ✅ NEW: Solo gustos para presupuesto personal
+      gastosEsenciales, // ✅ NEW: Esenciales compartidos
       gastosConVales,
       gastosFijos,
       gastosImprevistos,
@@ -159,21 +167,25 @@ export function useGastosDelMes(gastos: Gasto[], mes?: string) {
 
       // Totales
       totalMes,
-      totalVariables,
+      totalVariables, // Total gustos + esenciales
+      totalGustos, // ✅ NEW: Solo gustos
+      totalEsenciales, // ✅ NEW: Solo esenciales
       totalVales,
       totalFijos,
       totalImprevistos,
       totalHoy,
 
       // Disponible
-      disponibleVariables,
+      disponibleVariables, // Alias de disponibleGustos
+      disponibleGustos, // ✅ NEW: Disponible de presupuesto gustos
       disponibleVales,
       disponibleImprevistos,
       disponibleHoy,
       presupuestoDiario,
 
       // Porcentajes
-      porcentajeVariables,
+      porcentajeVariables, // Alias
+      porcentajeGustos, // ✅ NEW: Porcentaje de gustos usado
       porcentajeVales,
       porcentajeImprevistos,
 
