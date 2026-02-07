@@ -150,7 +150,7 @@ export default function HeroMetric() {
         <div className="mt-6">
           <div className="flex justify-between text-xs text-white/40 mb-2">
             <span>Gastado: {formatMoney(data.totalGastado)}</span>
-            <span>Presupuesto: {formatMoney(PRESUPUESTO_VARIABLE)}</span>
+            <span>Presupuesto: {formatMoney(PRESUPUESTO_GUSTOS)}</span>
           </div>
           <div className="h-3 bg-black/30 rounded-full overflow-hidden">
             <div
