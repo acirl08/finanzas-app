@@ -56,6 +56,7 @@ export async function GET(request: Request) {
               nombre: d.nombre,
               titular: d.titular,
               saldo: d.saldoActual,
+              saldoInicial: d.saldoInicial || d.saldoActual,
               cat: d.cat,
               pagoMinimo: d.pagoMinimo,
               prioridad: d.prioridad,
