@@ -47,7 +47,7 @@ export async function GET(request: Request) {
 
     switch (action) {
       case 'listar':
-        const deudaTotal = deudas.reduce((sum: number, d: any) => sum + (d.saldoActual || 0), 0);
+        const deudaTotal = deudas.reduce((sum: number, d: any) => sum + (d.saldoActual || d.saldo || 0), 0);
         return NextResponse.json({
           success: true,
           data: {
@@ -55,8 +55,8 @@ export async function GET(request: Request) {
               id: d.id,
               nombre: d.nombre,
               titular: d.titular,
-              saldo: d.saldoActual,
-              saldoInicial: d.saldoInicial || d.saldoActual,
+              saldoActual: d.saldoActual || d.saldo || 0, // Support both field names during migration
+              saldoInicial: d.saldoInicial || d.saldoActual || d.saldo || 0,
               cat: d.cat,
               pagoMinimo: d.pagoMinimo,
               prioridad: d.prioridad,
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { deudaId, nuevoSaldo, liquidada } = body;
+    const { deudaId, nuevoSaldo, saldoActual, liquidada } = body;
 
     if (!deudaId) {
       return NextResponse.json({ success: false, error: 'ID de deuda requerido' }, { status: 400 });
@@ -176,7 +176,10 @@ export async function PUT(request: Request) {
 
     const updateData: Record<string, any> = {};
 
-    if (nuevoSaldo !== undefined) {
+    // Accept both nuevoSaldo (legacy) and saldoActual (new standard)
+    if (saldoActual !== undefined) {
+      updateData.saldoActual = Number(saldoActual);
+    } else if (nuevoSaldo !== undefined) {
       updateData.saldoActual = Number(nuevoSaldo);
     }
 
