@@ -13,6 +13,7 @@ import {
   limit
 } from 'firebase/firestore';
 import { categoriasVales } from '@/lib/data';
+import { GastoCreateSchema, GastoUpdateSchema, validateRequest } from '@/lib/validation';
 
 // Timeout wrapper
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
@@ -59,39 +60,40 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { monto, categoria, descripcion, titular = 'compartido', esFijo = false, conVales = false, fecha } = body;
 
-    const montoNum = Number(monto);
-    if (!isValidMonto(montoNum)) {
-      return NextResponse.json({ success: false, error: 'Monto inválido (debe ser mayor a 0)' }, { status: 400 });
+    // Validate input with Zod
+    const validation = validateRequest(GastoCreateSchema, body);
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        details: validation.errors
+      }, { status: 400 });
     }
 
-    const categoriaLower = sanitizeString(categoria || 'otros', 50).toLowerCase().replace(/ /g, '_');
-    const esConVales = conVales || categoriasVales.includes(categoriaLower);
-    const descripcionSanitizada = sanitizeString(descripcion || categoria, 200);
-
-    const titularesValidos = ['alejandra', 'ricardo', 'compartido'];
-    const titularFinal = titularesValidos.includes(sanitizeString(titular, 50).toLowerCase())
-      ? sanitizeString(titular, 50).toLowerCase()
-      : 'compartido';
+    const data = validation.data;
+    const categoriaLower = data.categoria.toLowerCase().replace(/ /g, '_');
+    const esConVales = data.conVales || categoriasVales.includes(categoriaLower);
 
     const gasto = {
-      fecha: fecha || new Date().toISOString().split('T')[0],
-      monto: montoNum,
+      fecha: data.fecha,
+      monto: data.monto,
       categoria: categoriaLower,
-      descripcion: descripcionSanitizada,
-      titular: titularFinal,
-      esFijo: Boolean(esFijo),
+      descripcion: data.descripcion,
+      titular: data.titular,
+      esFijo: data.esFijo || false,
       conVales: esConVales,
+      metodoPago: data.metodoPago,
+      deudaId: data.deudaId,
       createdAt: Timestamp.now()
     };
 
     const docRef = await withTimeout(addDoc(collection(db, 'gastos'), gasto), 5000);
 
-    const tipoGasto = esFijo ? 'Gasto fijo' : (esConVales ? 'Gasto con vales' : 'Gasto');
+    const tipoGasto = gasto.esFijo ? 'Gasto fijo' : (esConVales ? 'Gasto con vales' : 'Gasto');
     return NextResponse.json({
       success: true,
-      message: `${tipoGasto} de $${montoNum.toLocaleString()} en ${categoria} registrado.`,
+      message: `${tipoGasto} de $${data.monto.toLocaleString()} en ${data.categoria} registrado.`,
       data: { id: docRef.id, ...gasto }
     });
   } catch (error: any) {
@@ -104,53 +106,29 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { gastoId, ...updates } = body;
 
-    if (!gastoId) {
-      return NextResponse.json({ success: false, error: 'ID de gasto requerido' }, { status: 400 });
+    // Validate input with Zod
+    const validation = validateRequest(GastoUpdateSchema, body);
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        details: validation.errors
+      }, { status: 400 });
     }
 
+    const { gastoId, ...updates } = validation.data;
     const updateData: Record<string, any> = {};
 
-    if (updates.monto !== undefined) {
-      const montoNum = Number(updates.monto);
-      if (!isValidMonto(montoNum)) {
-        return NextResponse.json({ success: false, error: 'Monto inválido' }, { status: 400 });
-      }
-      updateData.monto = montoNum;
-    }
-
-    if (updates.descripcion !== undefined) {
-      updateData.descripcion = sanitizeString(updates.descripcion, 200);
-    }
-
-    if (updates.categoria !== undefined) {
-      updateData.categoria = sanitizeString(updates.categoria, 50).toLowerCase();
-    }
-
-    if (updates.titular !== undefined) {
-      const titularVal = sanitizeString(updates.titular, 50).toLowerCase();
-      const titularesValidos = ['alejandra', 'ricardo', 'compartido'];
-      if (!titularesValidos.includes(titularVal)) {
-        return NextResponse.json({ success: false, error: 'Titular inválido' }, { status: 400 });
-      }
-      updateData.titular = titularVal;
-    }
-
-    if (updates.fecha !== undefined) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(updates.fecha)) {
-        return NextResponse.json({ success: false, error: 'Formato de fecha inválido' }, { status: 400 });
-      }
-      updateData.fecha = updates.fecha;
-    }
-
-    if (updates.esFijo !== undefined) {
-      updateData.esFijo = Boolean(updates.esFijo);
-    }
-
-    if (updates.conVales !== undefined) {
-      updateData.conVales = Boolean(updates.conVales);
-    }
+    if (updates.monto) updateData.monto = updates.monto;
+    if (updates.descripcion) updateData.descripcion = updates.descripcion;
+    if (updates.categoria) updateData.categoria = updates.categoria.toLowerCase();
+    if (updates.titular) updateData.titular = updates.titular;
+    if (updates.fecha) updateData.fecha = updates.fecha;
+    if (updates.esFijo !== undefined) updateData.esFijo = updates.esFijo;
+    if (updates.conVales !== undefined) updateData.conVales = updates.conVales;
+    if (updates.metodoPago) updateData.metodoPago = updates.metodoPago;
+    if (updates.deudaId) updateData.deudaId = updates.deudaId;
 
     await withTimeout(updateDoc(doc(db, 'gastos', gastoId), updateData), 5000);
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, doc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
+import { PagoDeudaSchema, validateRequest } from '@/lib/validation';
 
 /**
  * POST - Register debt payment atomically
@@ -14,31 +15,18 @@ import { collection, doc, writeBatch, getDoc, Timestamp } from 'firebase/firesto
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { deudaId, monto, fecha, descripcion, titular } = body;
 
-    // Validation
-    if (!deudaId || !monto || !fecha) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields: deudaId, monto, fecha' },
-        { status: 400 }
-      );
+    // Validate input with Zod
+    const validation = validateRequest(PagoDeudaSchema, body);
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        details: validation.errors
+      }, { status: 400 });
     }
 
-    const montoNum = Number(monto);
-    if (isNaN(montoNum) || montoNum <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid monto (must be positive number)' },
-        { status: 400 }
-      );
-    }
-
-    // Validate fecha format
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid fecha format (use YYYY-MM-DD)' },
-        { status: 400 }
-      );
-    }
+    const { deudaId, monto, fecha, descripcion, titular } = validation.data;
 
     // Get deuda to validate it exists and get current saldo
     const deudaRef = doc(db, 'deudas', deudaId);
@@ -53,7 +41,7 @@ export async function POST(request: Request) {
 
     const deuda = deudaSnap.data();
     const saldoActual = deuda.saldoActual || deuda.saldo || 0;
-    const nuevoSaldo = Math.max(0, saldoActual - montoNum);
+    const nuevoSaldo = Math.max(0, saldoActual - monto);
     const liquidada = nuevoSaldo === 0;
 
     // Prepare batch write (atomic transaction)
@@ -64,7 +52,7 @@ export async function POST(request: Request) {
     const gastoData = {
       fecha,
       descripcion: descripcion || `Pago a ${deuda.nombre}`,
-      monto: montoNum,
+      monto,
       categoria: 'deuda',
       titular: titular || 'alejandra',
       esFijo: false,
@@ -85,11 +73,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Pago de ${formatMoney(montoNum)} registrado exitosamente`,
+      message: `Pago de ${formatMoney(monto)} registrado exitosamente`,
       data: {
         gastoId: gastoRef.id,
         deudaId,
-        monto: montoNum,
+        monto,
         saldoAnterior: saldoActual,
         nuevoSaldo,
         liquidada,

@@ -13,6 +13,7 @@ import {
   limit
 } from 'firebase/firestore';
 import { deudasIniciales, calcularProyeccionDeudas, compararEscenarios } from '@/lib/data';
+import { DeudaUpdateSchema, validateRequest } from '@/lib/validation';
 
 // Timeout wrapper
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
@@ -168,31 +169,37 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { deudaId, nuevoSaldo, saldoActual, liquidada } = body;
 
-    if (!deudaId) {
-      return NextResponse.json({ success: false, error: 'ID de deuda requerido' }, { status: 400 });
+    // Validate input with Zod
+    const validation = validateRequest(DeudaUpdateSchema, body);
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        details: validation.errors
+      }, { status: 400 });
     }
 
+    const { deudaId, saldoActual, nuevoSaldo, liquidada, pagoMinimo, saldoInicial } = validation.data;
     const updateData: Record<string, any> = {};
 
     // Accept both nuevoSaldo (legacy) and saldoActual (new standard)
     if (saldoActual !== undefined) {
-      updateData.saldoActual = Number(saldoActual);
+      updateData.saldoActual = saldoActual;
     } else if (nuevoSaldo !== undefined) {
-      updateData.saldoActual = Number(nuevoSaldo);
+      updateData.saldoActual = nuevoSaldo;
     }
 
     if (liquidada !== undefined) {
-      updateData.liquidada = Boolean(liquidada);
+      updateData.liquidada = liquidada;
     }
 
-    if (body.pagoMinimo !== undefined) {
-      updateData.pagoMinimo = Number(body.pagoMinimo);
+    if (pagoMinimo !== undefined) {
+      updateData.pagoMinimo = pagoMinimo;
     }
 
-    if (body.saldoInicial !== undefined) {
-      updateData.saldoInicial = Number(body.saldoInicial);
+    if (saldoInicial !== undefined) {
+      updateData.saldoInicial = saldoInicial;
     }
 
     await withTimeout(updateDoc(doc(db, 'deudas', deudaId), updateData), 5000);
