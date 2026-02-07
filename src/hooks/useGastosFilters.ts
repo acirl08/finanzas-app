@@ -33,9 +33,9 @@ export function filtrarGastosDelMes(gastos: Gasto[], mes?: string): Gasto[] {
   return gastos.filter(g => g.fecha.startsWith(mesTarget));
 }
 
-// Filtrar gastos variables (no fijos, no vales, no imprevistos, no no_reconocido)
+// Filtrar gastos variables (no fijos, no vales, no imprevistos, no no_reconocido, no deuda)
 export function filtrarGastosVariables(gastos: Gasto[]): Gasto[] {
-  return gastos.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos' && g.categoria !== 'no_reconocido');
+  return gastos.filter(g => !g.esFijo && !g.conVales && g.categoria !== 'imprevistos' && g.categoria !== 'no_reconocido' && g.categoria !== 'deuda');
 }
 
 // Filtrar gastos esenciales (salud, transporte, hogar, gasolina, super sin vales)
@@ -57,6 +57,7 @@ export function filtrarGastosGustos(gastos: Gasto[]): Gasto[] {
     !g.conVales &&
     g.categoria !== 'imprevistos' &&
     g.categoria !== 'no_reconocido' &&
+    g.categoria !== 'deuda' &&
     !categoriasEsenciales.includes(g.categoria) &&
     !categoriasVales.includes(g.categoria)
   );
@@ -238,7 +239,7 @@ export function useRacha(gastos: Gasto[]) {
       const fecha = new Date(today.getFullYear(), today.getMonth(), dayOfMonth - i);
       const fechaStr = fecha.toISOString().split('T')[0];
       const gastosDia = gastos.filter(
-        g => g.fecha === fechaStr && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos' && g.categoria !== 'no_reconocido'
+        g => g.fecha === fechaStr && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos' && g.categoria !== 'no_reconocido' && g.categoria !== 'deuda'
       );
       const totalDia = calcularTotal(gastosDia);
       if (totalDia <= presupuestoDiarioIdeal) count++;
