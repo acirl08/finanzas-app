@@ -39,7 +39,8 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
-import { subscribeToGastos, Gasto, subscribeToDeudas, calcularTotalesFromDeudas, initializeFirestoreData, updateGasto, deleteGasto } from '@/lib/firestore';
+import { Gasto, updateGasto, deleteGasto } from '@/lib/firestore';
+import { useFirestore } from '@/contexts/FirestoreContext';
 import { PRESUPUESTO_VARIABLE, PRESUPUESTO_GUSTOS, deudasIniciales, presupuestosPersonales, VALES_DESPENSA, categoriaLabels, categorias } from '@/lib/data';
 import {
   filtrarGastosDelMes,
@@ -136,10 +137,10 @@ function ChartCardSkeleton() {
 // ============ MAIN COMPONENT ============
 export default function ProfessionalDashboard() {
   const { selectedMonth, isCurrentMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales); // Start with local data
-  const [loadingGastos, setLoadingGastos] = useState(true);
-  const [loadingDeudas, setLoadingDeudas] = useState(true);
+
+  // Use centralized Firestore context instead of local subscriptions
+  const { gastos, deudas, loadingGastos, loadingDeudas, isInitialized, totalesDeudas } = useFirestore();
+
   const [chartsReady, setChartsReady] = useState(false);
   const [selectedTitular, setSelectedTitular] = useState<'alejandra' | 'ricardo' | 'compartido' | null>(null);
   const [editingGasto, setEditingGasto] = useState<Gasto | null>(null);
@@ -169,46 +170,12 @@ export default function ProfessionalDashboard() {
     safeSetJSON('dashboard-collapsed-sections', newCollapsed);
   };
 
-  // Initialize Firebase data if empty, then load charts
+  // Wait for Firebase initialization before showing charts
   useEffect(() => {
-    initializeFirestoreData().then(() => {
+    if (isInitialized) {
       setChartsReady(true);
-    }).catch(console.error);
-  }, []);
-
-  // Subscribe to Firebase data
-  useEffect(() => {
-    let isMounted = true;
-
-    const unsubGastos = subscribeToGastos(
-      (g) => {
-        if (isMounted) {
-          setGastos(g);
-          setLoadingGastos(false);
-        }
-      },
-      (error) => console.error('Dashboard gastos error:', error)
-    );
-
-    const unsubDeudas = subscribeToDeudas(
-      (d) => {
-        if (isMounted) {
-          // Only update if Firebase has data, otherwise keep local data
-          if (d && d.length > 0) {
-            setDeudas(d);
-          }
-          setLoadingDeudas(false);
-        }
-      },
-      (error) => console.error('Dashboard deudas error:', error)
-    );
-
-    return () => {
-      isMounted = false;
-      unsubGastos();
-      unsubDeudas();
-    };
-  }, []);
+    }
+  }, [isInitialized]);
 
   // ============ MEMOIZED CALCULATIONS ============
   const today = new Date();
@@ -312,12 +279,11 @@ export default function ProfessionalDashboard() {
   }, [gastos, mesActual, hoy, daysRemaining]);
 
   const deudaCalculations = useMemo(() => {
-    const totalesDeuda = calcularTotalesFromDeudas(deudas);
     const deudaInicial = deudasIniciales.reduce((sum, d) => sum + d.saldoInicial, 0);
-    const deudaPagada = deudaInicial - totalesDeuda.deudaTotal;
+    const deudaPagada = deudaInicial - totalesDeudas.deudaTotal;
     const porcentajePagado = deudaInicial > 0 ? (deudaPagada / deudaInicial) * 100 : 0;
-    return { totalesDeuda, deudaInicial, deudaPagada, porcentajePagado };
-  }, [deudas]);
+    return { totalesDeuda: totalesDeudas, deudaInicial, deudaPagada, porcentajePagado };
+  }, [totalesDeudas]);
 
   // Streak calculation - días consecutivos sin exceder el promedio diario ideal
   const racha = useMemo(() => {

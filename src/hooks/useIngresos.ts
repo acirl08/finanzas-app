@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { subscribeToIngresos, Ingreso } from '@/lib/firestore';
+import { useMemo } from 'react';
+import { Ingreso } from '@/lib/firestore';
 import { INGRESO_MENSUAL } from '@/lib/data';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 /**
  * Hook para obtener los ingresos del mes seleccionado.
@@ -11,16 +12,7 @@ import { useMonth } from '@/contexts/MonthContext';
  */
 export function useIngresosMes() {
   const { selectedMonth } = useMonth();
-  const [ingresos, setIngresos] = useState<Ingreso[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsub = subscribeToIngresos((data) => {
-      setIngresos(data);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
+  const { ingresos, loadingIngresos: loading } = useFirestore();
 
   const data = useMemo(() => {
     const ingresosDelMes = ingresos.filter(i => i.fecha.startsWith(selectedMonth));

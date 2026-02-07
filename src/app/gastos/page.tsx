@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Receipt, Filter, Calendar, TrendingDown, Search, Plus, Smartphone } from 'lucide-react';
 import Link from 'next/link';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import SwipeableGastoItem from '@/components/SwipeableGastoItem';
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
 import { useMonth, formatMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 function getCategoryIcon(categoria: string) {
   const icons: Record<string, string> = {
@@ -49,19 +50,9 @@ function formatDate(fecha: string) {
 
 export default function GastosPage() {
   const { selectedMonth } = useMonth();
+  const { gastos, loadingGastos: loading } = useFirestore();
   const [filtro, setFiltro] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Cargar gastos de Firebase
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   // Usar hook centralizado CON el mes seleccionado
   const gastosData = useGastosDelMes(gastos, selectedMonth);

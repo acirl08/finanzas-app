@@ -1,30 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { CreditCard, TrendingDown, Target, AlertTriangle, CheckCircle2, Flame } from 'lucide-react';
-import { subscribeToDeudas, calcularTotalesFromDeudas } from '@/lib/firestore';
-import { deudasIniciales, calcularProyeccionDeudas } from '@/lib/data';
+import { calcularProyeccionDeudas, deudasIniciales } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
-import { Deuda } from '@/types';
 import DeudaEditor from '@/components/DeudaEditor';
 import DebtAdvisor from '@/components/DebtAdvisor';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 export default function DeudasPage() {
-  const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToDeudas((deudasActualizadas) => {
-      // Only update if Firebase has data, otherwise keep local data
-      if (deudasActualizadas && deudasActualizadas.length > 0) {
-        setDeudas(deudasActualizadas);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const totales = calcularTotalesFromDeudas(deudas);
+  // Use centralized Firestore context
+  const { deudas, totalesDeudas: totales, loadingDeudas: loading } = useFirestore();
   const deudaInicial = deudasIniciales.reduce((sum, d) => sum + d.saldoInicial, 0);
   const deudaPagada = deudaInicial - totales.deudaTotal;
 

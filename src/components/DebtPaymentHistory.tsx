@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { History, TrendingDown, Calendar } from 'lucide-react';
-import { subscribeToGastos, Gasto, subscribeToDeudas } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import { Deuda } from '@/types';
 import { formatMoney } from '@/lib/utils';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 function formatDate(dateStr: string) {
   const date = new Date(dateStr);
@@ -18,22 +19,8 @@ function formatDate(dateStr: string) {
 
 export default function DebtPaymentHistory() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [deudas, setDeudas] = useState<Deuda[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, deudas, loadingGastos: loading } = useFirestore();
   const [selectedDeuda, setSelectedDeuda] = useState<string>('todas');
-
-  useEffect(() => {
-    const unsubGastos = subscribeToGastos((g) => {
-      setGastos(g);
-      setLoading(false);
-    });
-    const unsubDeudas = subscribeToDeudas(setDeudas);
-    return () => {
-      unsubGastos();
-      unsubDeudas();
-    };
-  }, []);
 
   // Filtrar solo gastos de tipo deuda del mes seleccionado
   const pagosDelMes = useMemo(() => {

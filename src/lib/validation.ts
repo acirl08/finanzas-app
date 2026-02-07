@@ -87,7 +87,7 @@ export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown):
     return { success: true, data: result.data };
   }
 
-  const errors = result.error.errors.map(err =>
+  const errors = result.error.issues.map(err =>
     `${err.path.join('.')}: ${err.message}`
   );
 
