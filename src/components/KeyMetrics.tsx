@@ -45,7 +45,7 @@ export default function KeyMetrics() {
       : `${selectedMonth}-${String(daysInMonth).padStart(2, '0')}`; // último día del mes
 
     const gastosHoy = gastos.filter(g =>
-      g.fecha === fechaParaHoy && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos'
+      g.fecha === fechaParaHoy && !g.esFijo && !g.conVales && g.categoria !== 'imprevistos' && g.categoria !== 'deuda'
     );
     const gastadoHoy = gastosHoy.reduce((sum, g) => sum + g.monto, 0);
     const disponibleHoy = presupuestoDiario - gastadoHoy;
