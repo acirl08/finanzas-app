@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Shield, Plus, AlertTriangle, TrendingDown, History, Settings2, ChevronDown, ChevronUp, X, Check, ArrowRight, Trash2 } from 'lucide-react';
-import { subscribeToGastos, Gasto, addGasto, deleteGasto } from '@/lib/firestore';
+import { Gasto, addGasto, deleteGasto } from '@/lib/firestore';
 import { PRESUPUESTO_IMPREVISTOS, categoriaLabels } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { filtrarImprevistos, calcularTotal } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 import { toast } from 'sonner';
 
 interface EmergencyFundProps {
@@ -16,8 +17,7 @@ interface EmergencyFundProps {
 
 export default function EmergencyFund({ compact = false, className = '' }: EmergencyFundProps) {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, deudas, ingresos, pagos, loadingGastos: loading } = useFirestore();
   const [showHistory, setShowHistory] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -25,13 +25,6 @@ export default function EmergencyFund({ compact = false, className = '' }: Emerg
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((g) => {
-      setGastos(g);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const { gastosImprevistos, totalUsado, disponible, porcentaje, status } = useMemo(() => {
     const gastosDelMes = gastos.filter(g => g.fecha.startsWith(selectedMonth));

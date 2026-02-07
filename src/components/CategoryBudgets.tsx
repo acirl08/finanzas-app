@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { ShoppingCart, Utensils, Car, Heart, Sparkles, Package, AlertTriangle, ChevronDown, ChevronUp, Settings, X } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { formatMoney } from '@/lib/utils';
 import { metodoPagoLabels } from '@/lib/data';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 import { toast } from 'sonner';
 
 // Categorías simplificadas con presupuestos default sugeridos
@@ -42,8 +43,7 @@ interface CategoryBudget {
 
 export default function CategoryBudgets() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, loadingGastos: loading } = useFirestore();
   const [expanded, setExpanded] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [budgets, setBudgets] = useState<Record<string, CategoryBudget>>({});
@@ -65,14 +65,6 @@ export default function CategoryBudgets() {
     setBudgets(newBudgets);
     safeSetJSON('category-budgets', newBudgets);
   };
-
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const categoryData = useMemo(() => {
     // Filtrar gastos del mes seleccionado (no fijos)

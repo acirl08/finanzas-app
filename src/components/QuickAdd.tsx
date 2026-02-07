@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus, ShoppingCart, Utensils, Car, Heart, Sparkles, Package, Check, Settings2, AlertCircle, CreditCard, ChevronDown } from 'lucide-react';
-import { addGasto, subscribeToGastos, Gasto } from '@/lib/firestore';
+import { addGasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE, metodosPago } from '@/lib/data';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useMonth } from '@/contexts/MonthContext';
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 // 6 categorías simplificadas para quick-add
 const QUICK_CATEGORIES = [
@@ -35,14 +36,8 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
   const [metodoPago, setMetodoPago] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [gastos, setGastos] = useState<Gasto[]>([]);
+  const { gastos } = useFirestore();
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Subscribe to gastos for budget calculations
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos(setGastos);
-    return () => unsubscribe();
-  }, []);
 
   // Filtrar métodos de pago según el titular seleccionado
   const metodosFiltrados = metodosPago.filter(m =>

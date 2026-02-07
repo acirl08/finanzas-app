@@ -1,25 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_GUSTOS } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 export default function HeroMetric() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+  const { gastos, loadingGastos: loading } = useFirestore();
 
   // Usar hook centralizado con mes seleccionado
   const gastosData = useGastosDelMes(gastos, selectedMonth);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { ShoppingCart, Wallet, Sparkles, AlertTriangle, ShieldAlert } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import {
   PRESUPUESTO_DESPENSA,
   PRESUPUESTO_ESENCIALES,
@@ -16,6 +16,8 @@ import {
 } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useMonth, formatMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 
 interface BudgetCardProps {
   title: string;
@@ -121,16 +123,8 @@ function BudgetCard({ title, icon, presupuesto, gastado, color, bgGradient, deta
 
 export default function BudgetOverview() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, deudas, ingresos, pagos, loadingGastos: loading } = useFirestore();
 
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   // Filtrar gastos del mes seleccionado
   const gastosDelMes = useMemo(() =>

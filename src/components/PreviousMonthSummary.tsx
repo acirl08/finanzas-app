@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Award, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { subscribeToGastos, Gasto, subscribeToPagos, Pago } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 import { formatMonth, getCurrentMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 import {
   PRESUPUESTO_VARIABLE,
   PRESUPUESTO_IMPREVISTOS,
@@ -21,28 +22,8 @@ import {
 } from '@/hooks/useGastosFilters';
 
 export default function PreviousMonthSummary() {
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [pagos, setPagos] = useState<Pago[]>([]);
+  const { gastos, pagos, loadingGastos: loading } = useFirestore();
   const [expanded, setExpanded] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-    const unsubGastos = subscribeToGastos((g) => {
-      if (isMounted) {
-        setGastos(g);
-        setLoading(false);
-      }
-    });
-    const unsubPagos = subscribeToPagos((p) => {
-      if (isMounted) setPagos(p);
-    });
-    return () => {
-      isMounted = false;
-      unsubGastos();
-      unsubPagos();
-    };
-  }, []);
 
   const summary = useMemo(() => {
     const currentMonth = getCurrentMonth();

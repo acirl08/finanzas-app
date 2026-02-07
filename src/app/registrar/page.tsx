@@ -1,28 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import QuickAdd from '@/components/QuickAdd';
 import GastoForm from '@/components/GastoForm';
 import { Sparkles, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { categoriaLabels } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useGastosDelMes, useGastosPorCategoria } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 export default function RegistrarPage() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, loadingGastos: loading } = useFirestore();
   const [showAdvancedForm, setShowAdvancedForm] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   // Usar hooks centralizados CON el mes seleccionado
   const gastosData = useGastosDelMes(gastos, selectedMonth);

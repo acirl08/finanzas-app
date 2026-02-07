@@ -2,20 +2,18 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 import { categoriaLabels } from '@/lib/data';
 import { useMonth, formatMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 
 export default function UnplannedExpenses() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
+  const { gastos, deudas, ingresos, pagos, loadingGastos: loading } = useFirestore();
   const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    const unsub = subscribeToGastos(setGastos);
-    return () => unsub();
-  }, []);
 
   // Gastos no planificados del mes seleccionado
   const gastosNoPlanificados = useMemo(() => {

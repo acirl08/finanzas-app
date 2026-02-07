@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Sun, Moon, TrendingUp, Flame, CheckCircle2, PiggyBank } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE, VALES_DESPENSA } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { getTotalAhorroMensual } from './SavingsGoals';
 import { useGastosDelMes, useRacha } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 
 export default function DailyBudgetCard() {
   const { selectedMonth, isCurrentMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, deudas, ingresos, pagos, loadingGastos: loading } = useFirestore();
   const [ahorroMensual, setAhorroMensual] = useState(0);
 
   useEffect(() => {
@@ -25,24 +26,7 @@ export default function DailyBudgetCard() {
     };
     window.addEventListener('savings-goals-updated', handleSavingsUpdate);
 
-    // Fetch inicial via API (más confiable)
-    fetch('/api/finanzas')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.data?.gastosMes) {
-          setGastos(data.data.gastosMes);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-
-    // También suscribirse para actualizaciones en tiempo real
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
     return () => {
-      unsubscribe();
       window.removeEventListener('savings-goals-updated', handleSavingsUpdate);
     };
   }, []);

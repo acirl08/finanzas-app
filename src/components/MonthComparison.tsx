@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Calendar, ArrowRight } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 function formatPercent(value: number) {
   const sign = value > 0 ? '+' : '';
@@ -30,17 +30,8 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default function MonthComparison() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, loadingGastos: loading } = useFirestore();
   const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const comparisonData = useMemo(() => {
     // Usar el mes seleccionado en lugar del mes actual del sistema

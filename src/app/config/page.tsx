@@ -5,15 +5,16 @@ import { Settings, DollarSign, CreditCard, Bell, Save, Check, AlertTriangle, Rot
 import ExportData from '@/components/ExportData';
 import EmergencyFund from '@/components/EmergencyFund';
 import { deudasIniciales, suscripciones, INGRESO_MENSUAL, VALES_DESPENSA, PRESUPUESTO_IMPREVISTOS } from '@/lib/data';
-import { subscribeToDeudas, updateDeuda, updateConfiguracion, getConfiguracion } from '@/lib/firestore';
+import { updateDeuda, updateConfiguracion, getConfiguracion } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Deuda } from '@/types';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 export default function ConfigPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [isLoading, setIsLoading] = useState(false);
-  const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
+  const { deudas } = useFirestore();
 
   // Form states
   const [generalForm, setGeneralForm] = useState({
@@ -26,20 +27,14 @@ export default function ConfigPage() {
   const [deudaForms, setDeudaForms] = useState<Record<string, { saldoActual: number; pagoMinimo: number }>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Subscribe to real-time deuda updates
+  // Initialize form states with current deuda values
   useEffect(() => {
-    const unsubscribe = subscribeToDeudas((deudasActualizadas) => {
-      setDeudas(deudasActualizadas.length > 0 ? deudasActualizadas : deudasIniciales);
-      // Initialize form states with current values
-      const forms: Record<string, { saldoActual: number; pagoMinimo: number }> = {};
-      (deudasActualizadas.length > 0 ? deudasActualizadas : deudasIniciales).forEach(d => {
-        forms[d.id] = { saldoActual: d.saldoActual, pagoMinimo: d.pagoMinimo };
-      });
-      setDeudaForms(forms);
+    const forms: Record<string, { saldoActual: number; pagoMinimo: number }> = {};
+    (deudas.length > 0 ? deudas : deudasIniciales).forEach(d => {
+      forms[d.id] = { saldoActual: d.saldoActual, pagoMinimo: d.pagoMinimo };
     });
-
-    return () => unsubscribe();
-  }, []);
+    setDeudaForms(forms);
+  }, [deudas]);
 
   // Load configuration
   useEffect(() => {

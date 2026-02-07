@@ -25,8 +25,6 @@ import {
   gastosFijos,
   suscripciones
 } from '@/lib/data';
-import { subscribeToDeudas, subscribeToIngresos, calcularTotalesFromDeudas, Ingreso } from '@/lib/firestore';
-import { Deuda } from '@/types';
 import { formatMoney, MESES_CORTOS } from '@/lib/utils';
 import GastosPieChart from '@/components/GastosPieChart';
 import GastosTrendChart from '@/components/GastosTrendChart';
@@ -38,34 +36,12 @@ import FinancialReport from '@/components/FinancialReport';
 import CashflowForecast from '@/components/CashflowForecast';
 import SmartAlerts from '@/components/SmartAlerts';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 export default function AnalisisPage() {
   const { selectedMonth } = useMonth();
-
-  // Estado para deudas desde Firestore
-  const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
-  const [ingresos, setIngresos] = useState<Ingreso[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [usingFallback, setUsingFallback] = useState(false);
-
-  // Suscribirse a deudas e ingresos de Firestore
-  useEffect(() => {
-    const unsubDeudas = subscribeToDeudas((deudasActualizadas) => {
-      if (deudasActualizadas.length > 0) {
-        setDeudas(deudasActualizadas);
-        setUsingFallback(false);
-      } else {
-        setDeudas(deudasIniciales);
-        setUsingFallback(true);
-      }
-      setLoading(false);
-    });
-    const unsubIngresos = subscribeToIngresos(setIngresos);
-    return () => {
-      unsubDeudas();
-      unsubIngresos();
-    };
-  }, []);
+  const { deudas, ingresos, totalesDeudas: totales, loadingDeudas: loading } = useFirestore();
+  const usingFallback = deudas.length === 0;
 
   // Calcular ingreso mensual real del mes seleccionado
   const ingresoMensual = useMemo(() => {
@@ -73,9 +49,6 @@ export default function AnalisisPage() {
     const total = ingresosDelMes.reduce((sum, i) => sum + i.monto, 0);
     return total > 0 ? total : INGRESO_MENSUAL;
   }, [ingresos, selectedMonth]);
-
-  // Calcular todos los datos dinámicamente desde deudas de Firestore
-  const totales = useMemo(() => calcularTotalesFromDeudas(deudas), [deudas]);
   const gastosFijosTotal = useMemo(() => calcularGastosFijos(), []);
 
   // Calcular cuánto dinero extra hay disponible para atacar deudas

@@ -3,25 +3,17 @@
 import { useState, useEffect } from 'react';
 import { User, Users, Wallet } from 'lucide-react';
 import { presupuestosPersonales, PRESUPUESTO_VARIABLE } from '@/lib/data';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 import { useGastosPorTitular } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 
 export default function PresupuestosPersonales() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, deudas, ingresos, pagos, loadingGastos: loading } = useFirestore();
 
-  useEffect(() => {
-    // Subscribe to real-time gastos updates from Firebase
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   // Usar hook centralizado CON el mes seleccionado
   const titularData = useGastosPorTitular(gastos, selectedMonth);

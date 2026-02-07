@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Wallet, TrendingUp, TrendingDown, Building2, CreditCard, Plus, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
-import { subscribeToGastos, subscribeToIngresos, Gasto, Ingreso } from '@/lib/firestore';
+import { Gasto, Ingreso } from '@/lib/firestore';
 import { cuentasBanco } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 interface SaldoCuenta {
   id: string;
@@ -19,29 +20,11 @@ interface SaldoCuenta {
 
 export default function AccountBalance() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [ingresos, setIngresos] = useState<Ingreso[]>([]);
+  const { gastos, deudas, ingresos, pagos } = useFirestore();
   const [expanded, setExpanded] = useState(true);
   const [showAddIngreso, setShowAddIngreso] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const unsubGastos = subscribeToGastos(
-      (g) => { if (isMounted) setGastos(g); },
-      (error) => console.error('AccountBalance gastos error:', error)
-    );
-    const unsubIngresos = subscribeToIngresos(
-      (i) => { if (isMounted) setIngresos(i); },
-      (error) => console.error('AccountBalance ingresos error:', error)
-    );
-
-    return () => {
-      isMounted = false;
-      unsubGastos();
-      unsubIngresos();
-    };
-  }, []);
 
   // Calcular balance por cuenta del mes seleccionado
   const balancesPorCuenta = useMemo(() => {

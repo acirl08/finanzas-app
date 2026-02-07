@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -12,7 +12,6 @@ import {
   X,
   Sparkles
 } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import MonthSelector from './MonthSelector';
 
 const navItems = [
@@ -26,12 +25,6 @@ const navItems = [
 export default function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-
-  useEffect(() => {
-    const unsub = subscribeToGastos(setGastos);
-    return () => unsub();
-  }, []);
 
   return (
     <>
@@ -69,7 +62,7 @@ export default function Navbar() {
 
           {/* Month Selector */}
           <div className="flex items-center gap-4">
-            <MonthSelector gastos={gastos} compact />
+            <MonthSelector compact />
 
             {/* User Display */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5">
@@ -104,7 +97,7 @@ export default function Navbar() {
           <nav className="border-t border-white/5 bg-[#0f0f1a] p-4">
             {/* Month Selector for Mobile */}
             <div className="flex justify-center mb-4 pb-4 border-b border-white/10">
-              <MonthSelector gastos={gastos} compact />
+              <MonthSelector compact />
             </div>
             <div className="space-y-1">
               {navItems.map((item) => {

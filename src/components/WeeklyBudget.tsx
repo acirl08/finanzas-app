@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Calendar, ChevronDown, ChevronUp, User, Users, Wallet } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE, presupuestosPersonales } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 // Obtener inicio y fin de la semana actual (Lunes a Domingo)
 function getWeekBounds(date: Date) {
@@ -28,17 +28,8 @@ function getDayName(date: Date) {
 }
 
 export default function WeeklyBudget() {
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, loadingGastos: loading } = useFirestore();
   const [showDetails, setShowDetails] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const weekData = useMemo(() => {
     const today = new Date();

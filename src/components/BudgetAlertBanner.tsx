@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { AlertTriangle, X, List, Target, Pause, TrendingDown } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
 
 interface BudgetAlertBannerProps {
@@ -14,17 +16,9 @@ interface BudgetAlertBannerProps {
 
 export default function BudgetAlertBanner({ onDismiss }: BudgetAlertBannerProps) {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
+  const { gastos, deudas, ingresos, pagos, loadingGastos: loading } = useFirestore();
   const [dismissed, setDismissed] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   // Usar hook centralizado CON el mes seleccionado
   const gastosData = useGastosDelMes(gastos, selectedMonth);

@@ -5,13 +5,15 @@ import {
   AlertTriangle, X, Bell, CheckCircle, TrendingDown, TrendingUp,
   Users, Heart, MessageCircle, Target, Flame, Shield
 } from 'lucide-react';
-import { subscribeToGastos, Gasto, subscribeToDeudas, calcularTotalesFromDeudas } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import { PRESUPUESTO_VARIABLE, presupuestosPersonales, deudasIniciales, PRESUPUESTO_IMPREVISTOS } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { Deuda } from '@/types';
 import { useGastosDelMes, useGastosPorTitular, filtrarImprevistos, calcularTotal } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 import Link from 'next/link';
 
 interface Alert {
@@ -33,30 +35,11 @@ interface UnifiedAlertsProps {
 
 export default function UnifiedAlerts({ maxAlerts = 5, compact = false, className = '' }: UnifiedAlertsProps) {
   const { selectedMonth, isCurrentMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
-  const [loading, setLoading] = useState(true);
+  const { gastos, deudas, ingresos, pagos, totalesDeudas, loadingGastos: loading } = useFirestore();
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
   // Load dismissed alerts
-  useEffect(() => {
-    const dismissed = safeGetJSON<string[]>('unified-dismissed-alerts', []);
-    setDismissedAlerts(new Set(dismissed));
-  }, []);
 
-  useEffect(() => {
-    const unsubGastos = subscribeToGastos((g) => {
-      setGastos(g);
-      setLoading(false);
-    });
-    const unsubDeudas = subscribeToDeudas((d) => {
-      if (d && d.length > 0) setDeudas(d);
-    });
-    return () => {
-      unsubGastos();
-      unsubDeudas();
-    };
-  }, []);
 
   // Usar hooks centralizados CON mes seleccionado
   const gastosData = useGastosDelMes(gastos, selectedMonth);
@@ -186,7 +169,7 @@ export default function UnifiedAlerts({ maxAlerts = 5, compact = false, classNam
     }
 
     // ========== DEBT ALERTS ==========
-    const totalesDeuda = calcularTotalesFromDeudas(deudas);
+    const totalesDeuda = totalesDeudas;
     const deudaInicial = deudasIniciales.reduce((sum, d) => sum + d.saldoInicial, 0);
     const porcentajePagado = deudaInicial > 0 ? ((deudaInicial - totalesDeuda.deudaTotal) / deudaInicial) * 100 : 0;
 

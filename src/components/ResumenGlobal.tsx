@@ -16,7 +16,7 @@ import {
   ShieldAlert,
   Receipt
 } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import {
   gastosFijos,
   suscripciones,
@@ -26,6 +26,8 @@ import {
 } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 
 // Asignar titular a gastos fijos (Alejandra paga todo pero es responsable de gestionar)
 const gastosFijosConTitular = [
@@ -39,17 +41,9 @@ const gastosFijosConTitular = [
 
 export default function ResumenGlobal() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, deudas, ingresos, pagos, loadingGastos: loading } = useFirestore();
   const [expandedSection, setExpandedSection] = useState<string | null>('alejandra');
 
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const resumen = useMemo(() => {
     // Usar el mes seleccionado

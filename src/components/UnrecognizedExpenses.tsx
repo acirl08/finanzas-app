@@ -2,23 +2,21 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { HelpCircle, ChevronDown, ChevronUp, CheckCircle, Trash2, Calendar } from 'lucide-react';
-import { subscribeToGastos, Gasto, updateGasto, deleteGasto } from '@/lib/firestore';
+import { Gasto, updateGasto, deleteGasto } from '@/lib/firestore';
 import { formatMoney } from '@/lib/utils';
 import { categorias, categoriaLabels, metodoPagoLabels } from '@/lib/data';
 import { useMonth, formatMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 
 export default function UnrecognizedExpenses() {
   const { selectedMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
+  const { gastos, deudas, ingresos, pagos, loadingGastos: loading } = useFirestore();
   const [expanded, setExpanded] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newCategoria, setNewCategoria] = useState('');
   const [showAllMonths, setShowAllMonths] = useState(false);
 
-  useEffect(() => {
-    const unsub = subscribeToGastos(setGastos);
-    return () => unsub();
-  }, []);
 
   // Gastos no reconocidos del mes seleccionado
   const gastosNoReconocidosMes = useMemo(() => {

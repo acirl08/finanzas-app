@@ -1,34 +1,17 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { TrendingDown, Calendar, Target, ArrowRight } from 'lucide-react';
-import { subscribeToGastos, Gasto, subscribeToDeudas, calcularTotalesFromDeudas } from '@/lib/firestore';
-import { PRESUPUESTO_VARIABLE, deudasIniciales, calcularProyeccionDeudas } from '@/lib/data';
+import { deudasIniciales, calcularProyeccionDeudas, PRESUPUESTO_VARIABLE } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
-import { Deuda } from '@/types';
 import Link from 'next/link';
+import { useFirestore } from '@/contexts/FirestoreContext';
 
 export default function KeyMetrics() {
   const { selectedMonth, isCurrentMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [deudas, setDeudas] = useState<Deuda[]>(deudasIniciales);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubGastos = subscribeToGastos((g) => {
-      setGastos(g);
-      setLoading(false);
-    });
-    const unsubDeudas = subscribeToDeudas((d) => {
-      if (d && d.length > 0) setDeudas(d);
-    });
-    return () => {
-      unsubGastos();
-      unsubDeudas();
-    };
-  }, []);
+  const { gastos, deudas, totalesDeudas, loadingGastos: loading } = useFirestore();
 
   const gastosData = useGastosDelMes(gastos, selectedMonth);
 
@@ -66,7 +49,7 @@ export default function KeyMetrics() {
   }, [gastos, gastosData, isCurrentMonth, selectedMonth]);
 
   const deudaData = useMemo(() => {
-    const totales = calcularTotalesFromDeudas(deudas);
+    const totales = totalesDeudas;
     const deudaInicial = deudasIniciales.reduce((sum, d) => sum + d.saldoInicial, 0);
     const deudaPagada = deudaInicial - totales.deudaTotal;
     const porcentaje = deudaInicial > 0 ? (deudaPagada / deudaInicial) * 100 : 0;

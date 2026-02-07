@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Users, AlertTriangle, Heart, TrendingUp, TrendingDown, Bell, X, Check, MessageCircle } from 'lucide-react';
-import { subscribeToGastos, Gasto } from '@/lib/firestore';
+import { Gasto } from '@/lib/firestore';
 import { presupuestosPersonales } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { safeGetJSON, safeSetJSON } from '@/lib/storage';
 import { toast } from 'sonner';
 import { useGastosPorTitular, useGastosDelMes } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
+import { useFirestore } from '@/contexts/FirestoreContext';
+
 
 interface CoupleAlertsProps {
   className?: string;
@@ -53,27 +55,12 @@ const TITULAR_CONFIG = {
 
 export default function CoupleAlerts({ className = '' }: CoupleAlertsProps) {
   const { selectedMonth, isCurrentMonth } = useMonth();
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { gastos, deudas, ingresos, pagos, loadingGastos: loading } = useFirestore();
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
   const [shownToastAlerts, setShownToastAlerts] = useState<Set<string>>(new Set());
 
   // Load dismissed alerts
-  useEffect(() => {
-    const dismissed = safeGetJSON<string[]>('couple-dismissed-alerts', []);
-    setDismissedAlerts(new Set(dismissed));
 
-    const shownToasts = safeGetJSON<string[]>('couple-shown-toasts', []);
-    setShownToastAlerts(new Set(shownToasts));
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToGastos((gastosActualizados) => {
-      setGastos(gastosActualizados);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   // Usar hooks centralizados CON el mes seleccionado
   const titularData = useGastosPorTitular(gastos, selectedMonth);
