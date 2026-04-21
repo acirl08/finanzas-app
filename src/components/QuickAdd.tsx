@@ -1,27 +1,39 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, ShoppingCart, Utensils, Car, Heart, Sparkles, Package, Check, Settings2, AlertCircle, CreditCard, ChevronDown } from 'lucide-react';
+import {
+  ShoppingCart,
+  Utensils,
+  Car,
+  Heart,
+  Sparkles,
+  Package,
+  Check,
+  AlertCircle,
+} from 'lucide-react';
 import { addGasto } from '@/lib/firestore';
-import { PRESUPUESTO_VARIABLE, metodosPago } from '@/lib/data';
+import { metodosPago } from '@/lib/data';
 import { toast } from 'sonner';
-import Link from 'next/link';
 import { useMonth } from '@/contexts/MonthContext';
 import { useGastosDelMes } from '@/hooks/useGastosFilters';
 import { useFirestore } from '@/contexts/FirestoreContext';
 
-// 6 categorías simplificadas para quick-add
 const QUICK_CATEGORIES = [
-  { id: 'super', label: 'Súper', icon: ShoppingCart, color: 'from-blue-500 to-cyan-500', esVales: true },
-  { id: 'restaurantes', label: 'Comida', icon: Utensils, color: 'from-orange-500 to-amber-500', esVales: false },
-  { id: 'transporte', label: 'Transporte', icon: Car, color: 'from-emerald-500 to-green-500', esVales: false },
-  { id: 'salud', label: 'Salud', icon: Heart, color: 'from-red-500 to-pink-500', esVales: false },
-  { id: 'entretenimiento', label: 'Diversión', icon: Sparkles, color: 'from-purple-500 to-violet-500', esVales: false },
-  { id: 'otros_gustos', label: 'Otros', icon: Package, color: 'from-gray-500 to-slate-500', esVales: false },
-];
+  { id: 'super',           label: 'Súper',       icon: ShoppingCart, esVales: true  },
+  { id: 'restaurantes',    label: 'Comida',      icon: Utensils,     esVales: false },
+  { id: 'transporte',      label: 'Transporte',  icon: Car,          esVales: false },
+  { id: 'salud',           label: 'Salud',       icon: Heart,        esVales: false },
+  { id: 'entretenimiento', label: 'Diversión',   icon: Sparkles,     esVales: false },
+  { id: 'otros_gustos',    label: 'Otros',       icon: Package,      esVales: false },
+] as const;
 
-// Montos rápidos más comunes
 const QUICK_AMOUNTS = [50, 100, 200, 500];
+
+const TITULAR_OPTIONS = [
+  { value: 'alejandra',  label: 'Ale' },
+  { value: 'ricardo',    label: 'Ricardo' },
+  { value: 'compartido', label: 'Ambos' },
+] as const;
 
 interface QuickAddProps {
   defaultTitular?: 'alejandra' | 'ricardo' | 'compartido';
@@ -29,79 +41,65 @@ interface QuickAddProps {
 }
 
 export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: QuickAddProps) {
-  const { selectedMonth, isCurrentMonth } = useMonth();
+  const { selectedMonth } = useMonth();
+  const { gastos } = useFirestore();
   const [monto, setMonto] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [titular, setTitular] = useState<'alejandra' | 'ricardo' | 'compartido'>(defaultTitular);
   const [metodoPago, setMetodoPago] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const { gastos } = useFirestore();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filtrar métodos de pago según el titular seleccionado
-  const metodosFiltrados = metodosPago.filter(m =>
-    m.titular === null || m.titular === titular || titular === 'compartido'
+  const metodosFiltrados = metodosPago.filter(
+    (m) => m.titular === null || m.titular === titular || titular === 'compartido'
   );
 
-  // Focus en el input cuando se monta
   useEffect(() => {
-    const timer = setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
+    const timer = setTimeout(() => inputRef.current?.focus(), 100);
     return () => clearTimeout(timer);
   }, []);
 
-  // Usar hook centralizado para cálculos de presupuesto
   const gastosData = useGastosDelMes(gastos, selectedMonth);
 
-  // Calcular presupuesto diario y si excede
   const budgetInfo = useMemo(() => {
-    const { totalVariables, disponibleVariables, daysRemaining, totalHoy } = gastosData;
-
+    const { disponibleVariables, daysRemaining } = gastosData;
     const presupuestoDiario = Math.max(0, Math.floor(disponibleVariables / daysRemaining));
-
-    return { presupuestoDiario, totalHoy, disponible: disponibleVariables };
+    return { presupuestoDiario, disponible: disponibleVariables };
   }, [gastosData]);
 
-  const handleSubmit = async () => {
-    if (!monto || !selectedCategory) return;
-
+  const handleSubmit = async (categoryId: string) => {
     const montoNum = Number(monto);
-    if (montoNum <= 0) {
+    if (!monto || montoNum <= 0) {
       toast.error('El monto debe ser mayor a 0');
       return;
     }
 
     setIsSubmitting(true);
-
     try {
-      const categoria = QUICK_CATEGORIES.find(c => c.id === selectedCategory);
-
+      const categoria = QUICK_CATEGORIES.find((c) => c.id === categoryId);
       await addGasto({
         fecha: new Date().toISOString().split('T')[0],
-        descripcion: categoria?.label || selectedCategory,
+        descripcion: categoria?.label || categoryId,
         monto: montoNum,
-        categoria: selectedCategory,
-        titular: titular,
+        categoria: categoryId,
+        titular,
         conVales: categoria?.esVales || false,
         metodoPago: metodoPago || undefined,
       });
 
-      // Show success state
       setShowSuccess(true);
       toast.success(`$${montoNum.toLocaleString()} registrado`, {
-        description: `${categoria?.label} - ${titular === 'alejandra' ? 'Ale' : titular === 'ricardo' ? 'Ricardo' : 'Compartido'}`,
+        description: `${categoria?.label} · ${titular === 'alejandra' ? 'Ale' : titular === 'ricardo' ? 'Ricardo' : 'Compartido'}`,
       });
 
-      // Reset after animation
       setTimeout(() => {
         setMonto('');
         setSelectedCategory(null);
         setShowSuccess(false);
         onSuccess?.();
-      }, 1500);
-
+        inputRef.current?.focus();
+      }, 1400);
     } catch (error) {
       console.error('Error saving gasto:', error);
       toast.error('Error al guardar');
@@ -112,60 +110,35 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
-    // Si ya hay monto, enviar automáticamente
     if (monto && Number(monto) > 0) {
-      setTimeout(handleSubmit, 100);
+      handleSubmit(categoryId);
     }
   };
 
-  const canSubmit = monto && Number(monto) > 0 && selectedCategory;
+  const montoNum = Number(monto) || 0;
+  const exceedsDaily = montoNum > budgetInfo.presupuestoDiario && budgetInfo.presupuestoDiario > 0;
 
-  // Success animation
   if (showSuccess) {
     return (
-      <div className="glass-card bg-gradient-to-br from-emerald-500/20 to-green-500/10 border-emerald-500/30">
-        <div className="flex flex-col items-center justify-center py-8">
-          <div className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center mb-4 animate-in zoom-in duration-300">
-            <Check className="w-8 h-8 text-white" />
-          </div>
-          <p className="text-emerald-400 font-semibold text-lg">Registrado</p>
+      <div className="surface-raised flex flex-col items-center justify-center py-20">
+        <div className="w-14 h-14 rounded-full bg-sage-500 flex items-center justify-center mb-4">
+          <Check className="w-7 h-7 text-white" strokeWidth={2.5} />
         </div>
+        <p className="font-serif text-2xl text-ink-900">Registrado</p>
+        <p className="text-sm text-ink-500 mt-1">Siguiente gasto en un momento…</p>
       </div>
     );
   }
 
-  // Detectar si el monto excede el presupuesto diario
-  const montoNum = Number(monto) || 0;
-  const exceedsDaily = montoNum > budgetInfo.presupuestoDiario && budgetInfo.presupuestoDiario > 0;
-
   return (
-    <div className="glass-card">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-            <Plus className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-white">Registrar Gasto</h3>
-            <p className="text-xs text-white/50">
-              Diario: ${budgetInfo.presupuestoDiario.toLocaleString()}
-            </p>
-          </div>
-        </div>
-        <Link
-          href="/registrar"
-          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-          title="Más opciones"
-        >
-          <Settings2 className="w-4 h-4 text-white/40" />
-        </Link>
-      </div>
-
-      {/* Monto Input - BIG and prominent */}
-      <div className="mb-4">
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl text-white/40 font-bold">$</span>
+    <div className="surface-raised p-6 sm:p-8 space-y-8">
+      {/* Hero amount */}
+      <div>
+        <label className="text-label">Monto</label>
+        <div className="relative mt-2">
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 font-serif text-5xl sm:text-6xl text-ink-300">
+            $
+          </span>
           <input
             ref={inputRef}
             type="number"
@@ -173,143 +146,130 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
             value={monto}
             onChange={(e) => setMonto(e.target.value)}
             placeholder="0"
-            className={`w-full bg-white/5 border-2 rounded-2xl pl-12 pr-4 py-5 text-4xl font-bold text-white text-center placeholder:text-white/20 focus:outline-none transition-colors ${
-              exceedsDaily ? 'border-amber-500/50 focus:border-amber-500' : 'border-white/10 focus:border-purple-500/50'
-            }`}
+            className="w-full bg-transparent border-0 pl-10 sm:pl-14 pr-2 font-serif text-5xl sm:text-6xl text-ink-900 placeholder:text-ink-200 focus:outline-none tabular-nums"
+            aria-label="Monto del gasto"
           />
         </div>
 
-        {/* Warning si excede presupuesto diario */}
         {exceedsDaily && (
-          <div className="flex items-center gap-2 mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-            <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-            <p className="text-xs text-amber-400">
-              Esto excede tu presupuesto diario de ${budgetInfo.presupuestoDiario.toLocaleString()}
+          <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-honey-50 border border-honey-100">
+            <AlertCircle className="w-4 h-4 text-honey-600 mt-0.5 flex-shrink-0" />
+            <p className="text-[13px] text-honey-600 leading-snug">
+              Excede tu presupuesto diario de{' '}
+              <span className="font-medium">${budgetInfo.presupuestoDiario.toLocaleString()}</span>
             </p>
           </div>
         )}
 
-        {/* Montos rápidos */}
-        <div className="flex gap-2 mt-3">
-          {QUICK_AMOUNTS.map((amount) => (
-            <button
-              key={amount}
-              type="button"
-              onClick={() => setMonto(amount.toString())}
-              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-                Number(monto) === amount
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              ${amount}
-            </button>
-          ))}
+        <div className="mt-4 grid grid-cols-4 gap-2">
+          {QUICK_AMOUNTS.map((amount) => {
+            const active = Number(monto) === amount;
+            return (
+              <button
+                key={amount}
+                type="button"
+                onClick={() => setMonto(amount.toString())}
+                className={`py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  active
+                    ? 'bg-ink-900 text-app'
+                    : 'bg-subtle text-ink-500 hover:bg-ink-100 hover:text-ink-900'
+                }`}
+              >
+                ${amount}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Titular selector - pequeño */}
-      <div className="flex gap-2 mb-4">
-        {[
-          { value: 'alejandra' as const, label: 'Ale', color: 'pink' },
-          { value: 'ricardo' as const, label: 'Ricardo', color: 'blue' },
-          { value: 'compartido' as const, label: 'Ambos', color: 'green' },
-        ].map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => {
-              setTitular(option.value);
-              setMetodoPago(''); // Reset método de pago al cambiar titular
-            }}
-            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
-              titular === option.value
-                ? option.color === 'pink'
-                  ? 'bg-pink-500 text-white'
-                  : option.color === 'blue'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-green-500 text-white'
-                : 'bg-white/5 text-white/60 hover:bg-white/10'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <div className="divider" />
 
-      {/* Método de pago selector */}
-      <div className="mb-4">
-        <div className="relative">
-          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-          <select
-            value={metodoPago}
-            onChange={(e) => setMetodoPago(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-purple-500/50 cursor-pointer"
-          >
-            <option value="" className="bg-[#1a1a2e]">Método de pago (opcional)</option>
-            {metodosFiltrados.map((m) => (
-              <option key={m.id} value={m.id} className="bg-[#1a1a2e]">
-                {m.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+      {/* Titular */}
+      <div>
+        <label className="text-label">¿De quién?</label>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {TITULAR_OPTIONS.map((option) => {
+            const active = titular === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  setTitular(option.value);
+                  setMetodoPago('');
+                }}
+                className={`py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+                  active
+                    ? 'bg-sage-50 border-sage-200 text-sage-700'
+                    : 'bg-surface border-ink-100 text-ink-500 hover:border-ink-200 hover:text-ink-900'
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Categories Grid - 2 taps */}
-      <div className="grid grid-cols-3 gap-2">
-        {QUICK_CATEGORIES.map((cat) => {
-          const Icon = cat.icon;
-          const isSelected = selectedCategory === cat.id;
-
-          return (
-            <button
-              key={cat.id}
-              onClick={() => handleCategorySelect(cat.id)}
-              disabled={isSubmitting || !monto}
-              className={`
-                relative p-3 rounded-xl border-2 transition-all
-                ${isSelected
-                  ? `bg-gradient-to-br ${cat.color} border-white/30 scale-95`
-                  : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                }
-                ${!monto ? 'opacity-40 cursor-not-allowed' : ''}
-                ${isSubmitting ? 'opacity-50' : ''}
-              `}
-            >
-              <div className="flex flex-col items-center gap-1.5">
-                <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-white/70'}`} />
-                <span className={`text-xs font-medium ${isSelected ? 'text-white' : 'text-white/70'}`}>
-                  {cat.label}
-                </span>
-              </div>
-              {cat.esVales && (
-                <span className="absolute -top-1 -right-1 text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full">
-                  Vales
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Helper text */}
-      <div className="text-center mt-4">
-        <p className="text-white/30 text-xs">
-          {!monto
-            ? 'Escribe el monto primero'
-            : !selectedCategory
-            ? 'Ahora toca una categoría para guardar'
-            : 'Guardando...'
-          }
-        </p>
-        <Link
-          href="/registrar"
-          className="text-purple-400/70 hover:text-purple-400 text-xs mt-2 inline-block"
+      {/* Método de pago */}
+      <div>
+        <label htmlFor="metodo-pago" className="text-label">
+          Método de pago <span className="text-ink-300 normal-case tracking-normal">(opcional)</span>
+        </label>
+        <select
+          id="metodo-pago"
+          value={metodoPago}
+          onChange={(e) => setMetodoPago(e.target.value)}
+          className="field mt-2 cursor-pointer"
         >
-          ¿Necesitas más opciones? →
-        </Link>
+          <option value="">Selecciona…</option>
+          {metodosFiltrados.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Categorías */}
+      <div>
+        <label className="text-label">Categoría</label>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {QUICK_CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            const selected = selectedCategory === cat.id;
+            const disabled = !monto || isSubmitting;
+
+            return (
+              <button
+                key={cat.id}
+                onClick={() => handleCategorySelect(cat.id)}
+                disabled={disabled}
+                className={`relative group flex flex-col items-center justify-center gap-2 py-5 rounded-lg border transition-all ${
+                  selected
+                    ? 'bg-sage-50 border-sage-500 text-sage-700'
+                    : 'bg-surface border-ink-100 text-ink-500 hover:border-ink-300 hover:text-ink-900 hover:bg-subtle'
+                } ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <Icon className="w-5 h-5" strokeWidth={1.75} />
+                <span className="text-[13px] font-medium">{cat.label}</span>
+                {cat.esVales && (
+                  <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full bg-dust-50 text-dust-600 border border-dust-100">
+                    Vales
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="text-[13px] text-ink-400 text-center mt-4">
+          {!monto
+            ? 'Escribe el monto para activar las categorías'
+            : isSubmitting
+            ? 'Guardando…'
+            : 'Toca una categoría para guardar'}
+        </p>
       </div>
     </div>
   );

@@ -3,186 +3,132 @@
 import { useState } from 'react';
 import QuickAdd from '@/components/QuickAdd';
 import GastoForm from '@/components/GastoForm';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { categoriaLabels } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
 import { useGastosDelMes, useGastosPorCategoria } from '@/hooks/useGastosFilters';
 import { useMonth } from '@/contexts/MonthContext';
 import { useFirestore } from '@/contexts/FirestoreContext';
 
+const TIPS = [
+  'Registrar al momento del gasto te hace más consciente de tu dinero.',
+  'Antes de comprar, espera 24 horas. Si lo quieres mañana, considéralo.',
+  'Un café diario de $80 son $2,400 al mes. Lo pequeño se acumula.',
+  'Pregúntate: ¿esto me acerca a mi libertad financiera?',
+  'Cada peso que no gastas hoy es un peso para salir de deudas.',
+  'Distingue necesidad y deseo antes de cada compra.',
+];
+
 export default function RegistrarPage() {
   const { selectedMonth } = useMonth();
-  const { gastos, loadingGastos: loading } = useFirestore();
-  const [showAdvancedForm, setShowAdvancedForm] = useState(false);
+  const { gastos, loadingGastos } = useFirestore();
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Usar hooks centralizados CON el mes seleccionado
   const gastosData = useGastosDelMes(gastos, selectedMonth);
   const categoriaData = useGastosPorCategoria(gastosData.gastosVariables);
 
-  const today = new Date();
-  const totalGastadoVariables = gastosData.totalVariables;
+  const totalVariables = gastosData.totalVariables;
   const restante = gastosData.disponibleVariables;
+  const presupuestoDiario = gastosData.daysRemaining > 0
+    ? Math.max(0, Math.floor(restante / gastosData.daysRemaining))
+    : 0;
 
-  // Categorías ordenadas (top 4)
-  const categoriasOrdenadas = categoriaData.slice(0, 4).map(c => [c.categoria, c.total] as [string, number]);
-
-  const categoryColors: Record<string, string> = {
-    super: 'bg-blue-500',
-    restaurantes: 'bg-orange-500',
-    transporte: 'bg-emerald-500',
-    entretenimiento: 'bg-purple-500',
-    salud: 'bg-red-500',
-    ropa: 'bg-pink-500',
-    hogar: 'bg-yellow-500',
-    servicios: 'bg-indigo-500',
-    otros_gustos: 'bg-gray-500',
-    compras: 'bg-violet-500',
-    no_reconocido: 'bg-gray-400',
-  };
-
-  // Tips rotativos dinámicos
-  const tips = [
-    {
-      text: "Registra tus gastos inmediatamente después de hacerlos. Esto te ayudará a ser más consciente de tu dinero.",
-      stat: gastosData.gastosDelMes.length > 0 ? `Ya registraste ${gastosData.gastosDelMes.length} gastos este mes` : null,
-    },
-    {
-      text: "Antes de comprar algo, espera 24 horas. Si aún lo quieres mañana, considera comprarlo.",
-      stat: restante > 0 ? `Aún te quedan ${formatMoney(restante)} del mes` : null,
-    },
-    {
-      text: "Los gastos pequeños se acumulan. Un café de $80 al día son $2,400 al mes.",
-      stat: null,
-    },
-    {
-      text: "Pregúntate: ¿Esto me acerca o me aleja de mi meta de libertad financiera?",
-      stat: null,
-    },
-    {
-      text: "Cada peso que no gastas hoy es un peso más para salir de deudas.",
-      stat: totalGastadoVariables > 0 ? `Este mes has gastado ${formatMoney(totalGastadoVariables)} en variables` : null,
-    },
-    {
-      text: "Usa efectivo para gastos variables. Es más fácil controlar lo que ves.",
-      stat: null,
-    },
-    {
-      text: "Distingue entre necesidad y deseo. ¿Realmente lo necesitas o solo lo quieres?",
-      stat: null,
-    },
-  ];
-
-  // Seleccionar tip basado en el día
-  const tipIndex = today.getDate() % tips.length;
-  const currentTip = tips[tipIndex];
+  const topCategorias = categoriaData.slice(0, 4);
+  const tip = TIPS[new Date().getDate() % TIPS.length];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Registrar Gasto</h1>
-        <p className="text-white/50">Lleva el control de cada peso que gastas</p>
-      </div>
+      <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-display text-ink-900">Registrar gasto</h1>
+          <p className="text-ink-500 mt-1 text-[15px]">Cada peso cuenta hacia tu libertad.</p>
+        </div>
+        <dl className="flex gap-6 text-right sm:text-left">
+          <div>
+            <dt className="text-label">Diario</dt>
+            <dd className="font-serif text-2xl text-ink-900 tabular-nums">
+              ${presupuestoDiario.toLocaleString()}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-label">Restante</dt>
+            <dd className="font-serif text-2xl text-ink-900 tabular-nums">
+              ${restante.toLocaleString()}
+            </dd>
+          </div>
+        </dl>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form - Quick Add as default */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Main form */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Quick Add - Flujo rápido principal */}
           <QuickAdd defaultTitular="alejandra" />
 
-          {/* Toggle para formulario avanzado */}
           <button
-            onClick={() => setShowAdvancedForm(!showAdvancedForm)}
-            className="w-full flex items-center justify-center gap-2 py-3 text-sm text-white/50 hover:text-white/70 transition-colors border border-white/10 rounded-xl hover:bg-white/5"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full flex items-center justify-center gap-2 py-3 text-[13px] text-ink-500 hover:text-ink-900 rounded-lg hover:bg-subtle transition-colors"
           >
-            {showAdvancedForm ? (
-              <>
-                <ChevronUp className="w-4 h-4" />
-                Ocultar opciones avanzadas
-              </>
-            ) : (
-              <>
-                <ChevronDown className="w-4 h-4" />
-                Más opciones (fecha, descripción, método de pago)
-              </>
-            )}
+            {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {showAdvanced ? 'Ocultar' : 'Más opciones'} · fecha, descripción, tarjeta
           </button>
 
-          {/* Formulario avanzado - colapsable */}
-          {showAdvancedForm && (
-            <div className="animate-in slide-in-from-top-2 duration-200">
+          {showAdvanced && (
+            <div className="animate-in fade-in slide-in-from-top-2 duration-200">
               <GastoForm />
             </div>
           )}
         </div>
 
-        {/* Tips Sidebar */}
-        <div className="space-y-4">
-
-          {/* Tip Card - Rotativo */}
-          <div className="glass-card">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-5 h-5 text-purple-400" />
-              <h3 className="font-semibold text-white">Tip del día</h3>
-            </div>
-            <p className="text-sm text-white/60 leading-relaxed">
-              {currentTip.text}
+        {/* Sidebar */}
+        <aside className="space-y-4 lg:sticky lg:top-24">
+          {/* Tip del día */}
+          <section className="surface p-5">
+            <p className="text-label">Tip del día</p>
+            <p className="mt-3 text-[15px] text-ink-700 leading-relaxed font-serif italic">
+              “{tip}”
             </p>
-            {currentTip.stat && (
-              <p className="text-xs text-purple-400 mt-3 font-medium">
-                {currentTip.stat}
+          </section>
+
+          {/* Top categorías */}
+          <section className="surface p-5">
+            <div className="flex items-baseline justify-between">
+              <p className="text-label">Top categorías</p>
+              <p className="text-[11px] text-ink-400 tabular-nums">
+                {formatMoney(totalVariables)}
               </p>
-            )}
-          </div>
-
-          {/* Warning Card */}
-          <div className="glass-card border border-yellow-500/30 bg-yellow-500/5">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-400" />
-              <h3 className="font-semibold text-yellow-400">Recordatorio</h3>
             </div>
-            <p className="text-sm text-white/60 leading-relaxed">
-              Estamos en modo ahorro. Evita usar las tarjetas de crédito
-              excepto para gastos absolutamente necesarios.
-            </p>
-          </div>
 
-          {/* Categories Quick Stats - Datos reales */}
-          <div className="glass-card">
-            <h3 className="font-semibold text-white mb-4">Gastos por categoría</h3>
-            {loading ? (
-              <p className="text-sm text-white/40">Cargando...</p>
-            ) : categoriasOrdenadas.length > 0 ? (
-              <div className="space-y-3">
-                {categoriasOrdenadas.map(([categoria, amount]) => {
-                  const percent = totalGastadoVariables > 0 ? (amount / totalGastadoVariables) * 100 : 0;
+            {loadingGastos ? (
+              <p className="text-sm text-ink-400 mt-4">Cargando…</p>
+            ) : topCategorias.length > 0 ? (
+              <ul className="mt-4 space-y-3">
+                {topCategorias.map((c) => {
+                  const pct = totalVariables > 0 ? (c.total / totalVariables) * 100 : 0;
                   return (
-                    <div key={categoria} className="flex items-center gap-3">
-                      <div className={`w-2 h-8 rounded-full ${categoryColors[categoria] || 'bg-gray-500'}`} />
-                      <div className="flex-1">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-white/70">{categoriaLabels[categoria] || categoria}</span>
-                          <span className="text-white font-medium">{formatMoney(amount)}</span>
-                        </div>
-                        <div className="h-1 bg-white/10 rounded-full mt-1">
-                          <div
-                            className={`h-full rounded-full ${categoryColors[categoria] || 'bg-gray-500'}`}
-                            style={{ width: `${percent}%` }}
-                          />
-                        </div>
+                    <li key={c.categoria}>
+                      <div className="flex justify-between text-[13px]">
+                        <span className="text-ink-700">
+                          {categoriaLabels[c.categoria] || c.categoria}
+                        </span>
+                        <span className="text-ink-900 font-medium tabular-nums">
+                          {formatMoney(c.total)}
+                        </span>
                       </div>
-                    </div>
+                      <div className="progress-track mt-1.5">
+                        <div className="progress-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             ) : (
-              <div className="text-center py-4">
-                <p className="text-sm text-white/40">Sin gastos este mes</p>
-                <p className="text-xs text-white/30 mt-1">Registra tu primer gasto</p>
-              </div>
+              <p className="text-sm text-ink-400 mt-4">
+                Aún no hay gastos este mes. Registra el primero.
+              </p>
             )}
-          </div>
-        </div>
+          </section>
+        </aside>
       </div>
     </div>
   );
