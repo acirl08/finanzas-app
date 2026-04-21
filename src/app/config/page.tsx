@@ -387,17 +387,24 @@ function MoneyField({
   error?: string;
   compact?: boolean;
 }) {
+  const padY = compact ? 'py-2.5' : 'py-3.5';
+  const sizeClass = compact ? 'text-[15px]' : 'text-[17px]';
+
   return (
     <div>
       <label className="field-label">{label}</label>
-      <div className="relative">
-        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400 text-[15px]">$</span>
+      <div
+        className={`flex items-center gap-2 rounded-lg border bg-surface px-4 ${padY} transition-colors focus-within:border-sage-500 focus-within:shadow-ring-sage ${
+          error ? 'border-clay-500' : 'border-ink-100 hover:border-ink-200'
+        }`}
+      >
+        <span className={`text-ink-400 shrink-0 ${sizeClass}`}>$</span>
         <input
           type="number"
           value={value}
           min={0}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          className={`field pl-8 tabular-nums ${compact ? '' : 'field-lg'} ${error ? 'border-clay-500 focus:border-clay-500' : ''}`}
+          className={`flex-1 min-w-0 bg-transparent border-0 p-0 text-ink-900 focus:outline-none tabular-nums ${sizeClass}`}
         />
       </div>
       {error && <p className="mt-1 text-[12px] text-clay-500">{error}</p>}
