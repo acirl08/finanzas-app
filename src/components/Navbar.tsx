@@ -10,16 +10,16 @@ import {
   Settings,
   Menu,
   X,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import MonthSelector from './MonthSelector';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/analisis', label: 'Análisis', icon: Sparkles },
-  { href: '/gastos', label: 'Gastos', icon: Receipt },
+  { href: '/', label: 'Hoy', icon: LayoutDashboard },
   { href: '/registrar', label: 'Registrar', icon: PlusCircle },
-  { href: '/config', label: 'Config', icon: Settings },
+  { href: '/gastos', label: 'Gastos', icon: Receipt },
+  { href: '/analisis', label: 'Análisis', icon: Sparkles },
+  { href: '/config', label: 'Ajustes', icon: Settings },
 ];
 
 export default function Navbar() {
@@ -28,22 +28,15 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Desktop Top Navbar */}
-      <header className="hidden lg:flex fixed top-0 left-0 right-0 h-16 bg-[#0f0f1a]/80 backdrop-blur-xl border-b border-white/5 z-50 px-6">
+      {/* Desktop header */}
+      <header className="hidden lg:flex fixed top-0 left-0 right-0 h-16 bg-app/85 backdrop-blur-md border-b border-ink-100 z-50 px-6">
         <div className="flex items-center justify-between w-full max-w-[1600px] mx-auto">
-          {/* Logo & Nav */}
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">F</span>
-              </div>
-              <span className="font-bold text-white">Finanzas</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                2026
-              </span>
+          <div className="flex items-center gap-10">
+            <Link href="/" className="flex items-baseline gap-2">
+              <span className="text-[22px] font-serif text-ink-900 leading-none">Finanzas</span>
+              <span className="text-[11px] text-ink-400 tracking-wide">2026</span>
             </Link>
 
-            {/* Navigation Pills */}
             <nav className="nav-pill">
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
@@ -60,43 +53,38 @@ export default function Navbar() {
             </nav>
           </div>
 
-          {/* Month Selector */}
           <div className="flex items-center gap-4">
             <MonthSelector compact />
-
-            {/* User Display */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">A</span>
+            <div className="flex items-center gap-2 pl-4 border-l border-ink-100">
+              <div className="w-8 h-8 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-[13px] font-medium">
+                A
               </div>
-              <span className="text-sm text-white/80">Ale & Ricardo</span>
+              <span className="text-[13px] text-ink-500">Ale &amp; Ricardo</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 bg-[#0f0f1a]/95 backdrop-blur-xl border-b border-white/5 z-50">
+      {/* Mobile header */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 bg-app/95 backdrop-blur-md border-b border-ink-100 z-50">
         <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">F</span>
-            </div>
-            <span className="font-bold text-white">Finanzas</span>
-          </div>
+          <Link href="/" className="flex items-baseline gap-2">
+            <span className="text-[20px] font-serif text-ink-900 leading-none">Finanzas</span>
+            <span className="text-[11px] text-ink-400 tracking-wide">2026</span>
+          </Link>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-2 rounded-xl bg-white/5"
+            className="btn-icon"
+            aria-label={isOpen ? 'Cerrar menú' : 'Abrir menú'}
           >
-            {isOpen ? <X className="w-5 h-5 text-white" /> : <Menu className="w-5 h-5 text-white" />}
+            {isOpen ? <X className="w-4 h-4 text-ink-700" /> : <Menu className="w-4 h-4 text-ink-700" />}
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile overlay menu */}
         {isOpen && (
-          <nav className="border-t border-white/5 bg-[#0f0f1a] p-4">
-            {/* Month Selector for Mobile */}
-            <div className="flex justify-center mb-4 pb-4 border-b border-white/10">
+          <nav className="border-t border-ink-100 bg-surface p-4">
+            <div className="flex justify-center mb-4 pb-4 border-b border-ink-100">
               <MonthSelector compact />
             </div>
             <div className="space-y-1">
@@ -109,10 +97,10 @@ export default function Navbar() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                       isActive
-                        ? 'bg-purple-500/20 text-purple-400'
-                        : 'text-white/60 hover:bg-white/5 hover:text-white'
+                        ? 'bg-sage-50 text-sage-700'
+                        : 'text-ink-500 hover:bg-subtle hover:text-ink-900'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -125,10 +113,10 @@ export default function Navbar() {
         )}
       </header>
 
-      {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0f0f1a]/95 backdrop-blur-xl border-t border-white/5 z-50">
-        <div className="flex justify-around py-2">
-          {navItems.slice(0, 5).map((item) => {
+      {/* Mobile bottom nav */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-app/95 backdrop-blur-md border-t border-ink-100 z-50">
+        <div className="flex justify-around py-1.5">
+          {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
 
@@ -136,12 +124,12 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center p-2 rounded-xl transition-colors ${
-                  isActive ? 'text-purple-400' : 'text-white/40'
-                }`}
+                className="flex flex-col items-center gap-0.5 px-3 py-2"
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px] mt-1">{item.label}</span>
+                <Icon className={`w-5 h-5 ${isActive ? 'text-sage-600' : 'text-ink-400'}`} />
+                <span className={`text-[10px] ${isActive ? 'text-sage-700 font-medium' : 'text-ink-400'}`}>
+                  {item.label}
+                </span>
               </Link>
             );
           })}
