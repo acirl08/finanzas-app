@@ -41,19 +41,19 @@ export default function RegistrarPage() {
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="font-serif text-display text-ink-900">Registrar gasto</h1>
-          <p className="text-ink-500 mt-1 text-[15px]">Cada peso cuenta hacia tu libertad.</p>
+          <h1 className="text-display text-ink-900">Registrar gasto</h1>
+          <p className="text-ink-500 mt-1 text-[14px]">Cada peso cuenta hacia tu libertad.</p>
         </div>
-        <dl className="flex gap-6 text-right sm:text-left">
+        <dl className="flex gap-8 text-left">
           <div>
             <dt className="text-label">Diario</dt>
-            <dd className="font-serif text-2xl text-ink-900 tabular-nums">
+            <dd className="mt-1 text-[22px] font-semibold text-ink-900 font-numeric">
               ${presupuestoDiario.toLocaleString()}
             </dd>
           </div>
           <div>
             <dt className="text-label">Restante</dt>
-            <dd className="font-serif text-2xl text-ink-900 tabular-nums">
+            <dd className="mt-1 text-[22px] font-semibold text-ink-900 font-numeric">
               ${restante.toLocaleString()}
             </dd>
           </div>
@@ -85,9 +85,7 @@ export default function RegistrarPage() {
           {/* Tip del día */}
           <section className="surface p-5">
             <p className="text-label">Tip del día</p>
-            <p className="mt-3 text-[15px] text-ink-700 leading-relaxed font-serif italic">
-              “{tip}”
-            </p>
+            <p className="mt-3 text-[14px] text-ink-700 leading-relaxed">{tip}</p>
           </section>
 
           {/* Top categorías */}

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Instrument_Serif } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import FloatingChat from '@/components/FloatingChat';
@@ -11,14 +11,6 @@ import { FirestoreProvider } from '@/contexts/FirestoreContext';
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
-  display: 'swap',
-});
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
-  weight: '400',
-  style: ['normal', 'italic'],
-  variable: '--font-serif',
   display: 'swap',
 });
 
@@ -47,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.variable} ${instrumentSerif.variable}`}>
+    <html lang="es" className={inter.variable}>
       <head>
         <link rel="apple-touch-icon" href="/icon.svg" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
@@ -57,10 +49,10 @@ export default function RootLayout({
           <MonthProvider>
             <div className="min-h-screen bg-app text-ink-900">
               <Navbar />
-              <main className="pt-20 lg:pt-24 pb-24 lg:pb-8 px-4 lg:px-8 max-w-[1600px] mx-auto">
-                <ErrorBoundary>
-                  {children}
-                </ErrorBoundary>
+              <main className="lg:pl-[240px]">
+                <div className="pt-4 lg:pt-10 pb-24 lg:pb-10 px-4 lg:px-10 max-w-[1320px] mx-auto">
+                  <ErrorBoundary>{children}</ErrorBoundary>
+                </div>
               </main>
               <FloatingChat />
               <Toaster

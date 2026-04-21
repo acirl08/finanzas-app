@@ -74,12 +74,11 @@ module.exports = {
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        serif: ['var(--font-serif)', 'Georgia', 'serif'],
       },
       fontSize: {
-        'display-xl': ['60px', { lineHeight: '1', letterSpacing: '-0.02em' }],
-        'display-lg': ['48px', { lineHeight: '1.05', letterSpacing: '-0.02em' }],
-        'display':    ['36px', { lineHeight: '1.1', letterSpacing: '-0.01em' }],
+        'display-xl': ['52px', { lineHeight: '1.05', letterSpacing: '-0.025em', fontWeight: '600' }],
+        'display-lg': ['40px', { lineHeight: '1.1',  letterSpacing: '-0.02em',  fontWeight: '600' }],
+        'display':    ['28px', { lineHeight: '1.15', letterSpacing: '-0.02em',  fontWeight: '600' }],
       },
       borderRadius: {
         'xs': '4px',

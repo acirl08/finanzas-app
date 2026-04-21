@@ -80,41 +80,40 @@ html, body {
 }
 
 /* ============================================================
-   TYPOGRAPHY · Números en serif, UI en sans
+   TYPOGRAPHY · Todo Inter, con tabular-nums para cifras
    ============================================================ */
 .font-numeric {
-  font-family: var(--font-serif), Georgia, serif;
   font-feature-settings: 'tnum' on, 'lnum' on;
   font-variant-numeric: tabular-nums lining-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
 
 .text-hero {
-  font-family: var(--font-serif), Georgia, serif;
-  font-size: 60px;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  font-weight: 400;
+  font-size: 44px;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-weight: 600;
   color: var(--text-primary);
+  font-feature-settings: 'tnum' on, 'lnum' on, 'cv11' on;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
-@media (max-width: 640px) {
-  .text-hero { font-size: 44px; }
+@media (min-width: 640px) {
+  .text-hero { font-size: 52px; }
 }
 
 .text-display {
-  font-family: var(--font-serif), Georgia, serif;
-  font-size: 36px;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .text-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-tertiary);
 }

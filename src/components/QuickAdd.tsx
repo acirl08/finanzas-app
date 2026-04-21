@@ -121,24 +121,22 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
   if (showSuccess) {
     return (
       <div className="surface-raised flex flex-col items-center justify-center py-20">
-        <div className="w-14 h-14 rounded-full bg-sage-500 flex items-center justify-center mb-4">
-          <Check className="w-7 h-7 text-white" strokeWidth={2.5} />
+        <div className="w-12 h-12 rounded-full bg-sage-500 flex items-center justify-center mb-4">
+          <Check className="w-6 h-6 text-white" strokeWidth={2.5} />
         </div>
-        <p className="font-serif text-2xl text-ink-900">Registrado</p>
+        <p className="text-[18px] font-semibold text-ink-900">Registrado</p>
         <p className="text-sm text-ink-500 mt-1">Siguiente gasto en un momento…</p>
       </div>
     );
   }
 
   return (
-    <div className="surface-raised p-6 sm:p-8 space-y-8">
+    <div className="surface-raised p-6 sm:p-8 space-y-7">
       {/* Hero amount */}
       <div>
         <label className="text-label">Monto</label>
-        <div className="relative mt-2">
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 font-serif text-5xl sm:text-6xl text-ink-300">
-            $
-          </span>
+        <div className="relative mt-2 flex items-baseline">
+          <span className="text-hero text-ink-300 select-none">$</span>
           <input
             ref={inputRef}
             type="number"
@@ -146,7 +144,7 @@ export default function QuickAdd({ defaultTitular = 'alejandra', onSuccess }: Qu
             value={monto}
             onChange={(e) => setMonto(e.target.value)}
             placeholder="0"
-            className="w-full bg-transparent border-0 pl-10 sm:pl-14 pr-2 font-serif text-5xl sm:text-6xl text-ink-900 placeholder:text-ink-200 focus:outline-none tabular-nums"
+            className="flex-1 ml-1 bg-transparent border-0 p-0 text-hero text-ink-900 placeholder:text-ink-200 focus:outline-none font-numeric"
             aria-label="Monto del gasto"
           />
         </div>
