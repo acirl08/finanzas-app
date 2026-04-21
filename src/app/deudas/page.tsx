@@ -1,25 +1,19 @@
 'use client';
 
 import { useMemo } from 'react';
-import { CreditCard, TrendingDown, Target, AlertTriangle, CheckCircle2, Flame } from 'lucide-react';
-import { calcularProyeccionDeudas, deudasIniciales } from '@/lib/data';
+import Link from 'next/link';
+import { CheckCircle2, Flame, ArrowRight } from 'lucide-react';
+import { calcularProyeccionDeudas } from '@/lib/data';
 import { formatMoney } from '@/lib/utils';
-import DeudaEditor from '@/components/DeudaEditor';
-import DebtAdvisor from '@/components/DebtAdvisor';
 import { useFirestore } from '@/contexts/FirestoreContext';
 
 export default function DeudasPage() {
-  // Use centralized Firestore context
   const { deudas, totalesDeudas: totales, loadingDeudas: loading } = useFirestore();
-  const deudaInicial = deudasIniciales.reduce((sum, d) => sum + d.saldoInicial, 0);
-  const deudaPagada = deudaInicial - totales.deudaTotal;
 
-  // Ordenar por prioridad (CAT más alto primero - método avalancha)
   const deudasOrdenadas = [...deudas].sort((a, b) => a.prioridad - b.prioridad);
-  const deudasActivas = deudasOrdenadas.filter(d => !d.liquidada);
-  const deudasLiquidadas = deudasOrdenadas.filter(d => d.liquidada);
+  const deudasActivas = deudasOrdenadas.filter((d) => !d.liquidada);
+  const deudasLiquidadas = deudasOrdenadas.filter((d) => d.liquidada);
 
-  // Calcular fecha de libertad dinámica
   const fechaLibertad = useMemo(() => {
     const proyeccion = calcularProyeccionDeudas(deudas, 0);
     const fecha = new Date(proyeccion.fechaLibertad + '-01');
@@ -28,223 +22,212 @@ export default function DeudasPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Deudas</h1>
-        <p className="text-white/50">Método avalancha - liquidando por CAT más alto</p>
-      </div>
+      <header>
+        <h1 className="text-display text-ink-900">Deudas</h1>
+        <p className="text-ink-500 mt-1 text-[14px]">
+          Método avalancha — liquidando primero las de mayor CAT.
+        </p>
+      </header>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="metric-card">
-          <div className="metric-card-header">
-            <div className="metric-card-title">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span>Deuda Total</span>
-            </div>
-            <CreditCard className="w-4 h-4 text-red-400" />
+      {/* Hero */}
+      <section className="surface-raised p-6 sm:p-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] lg:items-end gap-6">
+          <div>
+            <p className="text-label">Deuda total</p>
+            <p className="mt-2 text-hero text-ink-900 font-numeric">
+              {formatMoney(totales.deudaTotal)}
+            </p>
+            <p className="mt-1 text-[14px] text-ink-500">
+              De {formatMoney(totales.deudaInicial)} inicial ·{' '}
+              <span className="text-sage-700 font-medium">
+                {formatMoney(totales.deudaPagada)} liquidado
+              </span>
+            </p>
           </div>
-          <div className="metric-card-value text-red-400">
-            {formatMoney(totales.deudaTotal)}
-          </div>
-          <p className="text-xs text-[var(--text-tertiary)] mt-2">
-            De {formatMoney(deudaInicial)} inicial
-          </p>
+          <span className="pill pill-sage self-start lg:self-end">
+            {Math.round(totales.porcentajePagado)}% pagado
+          </span>
         </div>
 
-        <div className="metric-card">
-          <div className="metric-card-header">
-            <div className="metric-card-title">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Ya Pagaste</span>
-            </div>
-            <TrendingDown className="w-4 h-4 text-emerald-400" />
+        <div className="mt-6">
+          <div className="progress-track h-2">
+            <div
+              className="progress-fill"
+              style={{ width: `${Math.min(100, totales.porcentajePagado)}%` }}
+            />
           </div>
-          <div className="metric-card-value text-emerald-400">
-            {formatMoney(deudaPagada)}
+          <div className="flex justify-between mt-2 text-[12px] text-ink-400 tabular-nums">
+            <span>{formatMoney(totales.deudaPagada)} pagado</span>
+            <span>{formatMoney(totales.deudaTotal)} restante</span>
           </div>
-          <p className="text-xs text-[var(--text-tertiary)] mt-2">
-            {totales.porcentajePagado.toFixed(1)}% del total
-          </p>
         </div>
 
-        <div className="metric-card">
-          <div className="metric-card-header">
-            <div className="metric-card-title">
-              <div className="w-2 h-2 rounded-full bg-purple-500" />
-              <span>Pago Mensual</span>
-            </div>
-            <Target className="w-4 h-4 text-purple-400" />
+        {deudasActivas.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-ink-100 flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-[13px] text-ink-500">Meta</p>
+            <p className="text-[15px] text-ink-900 font-medium capitalize">
+              Libres de deuda en {fechaLibertad}
+            </p>
           </div>
-          <div className="metric-card-value">
+        )}
+      </section>
+
+      {/* Stats fila */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="surface p-5">
+          <p className="text-label">Pagos mínimos</p>
+          <p className="mt-2 text-[24px] text-ink-900 font-semibold font-numeric">
             {formatMoney(totales.pagosMinimos)}
-          </div>
-          <p className="text-xs text-[var(--text-tertiary)] mt-2">
-            Suma de mínimos
+          </p>
+          <p className="mt-1 text-[12px] text-ink-400">suma mensual</p>
+        </div>
+        <div className="surface p-5">
+          <p className="text-label">Activas</p>
+          <p className="mt-2 text-[24px] text-ink-900 font-semibold font-numeric">
+            {deudasActivas.length}
+          </p>
+          <p className="mt-1 text-[12px] text-ink-400">
+            {deudasActivas.length === 1 ? 'tarjeta' : 'tarjetas'}
           </p>
         </div>
-
-        <div className="metric-card">
-          <div className="metric-card-header">
-            <div className="metric-card-title">
-              <div className="w-2 h-2 rounded-full bg-orange-500" />
-              <span>Cuentas</span>
-            </div>
-            <Flame className="w-4 h-4 text-orange-400" />
-          </div>
-          <div className="metric-card-value">
-            {deudasActivas.length} <span className="text-lg text-[var(--text-tertiary)]">activas</span>
-          </div>
-          <p className="text-xs text-[var(--text-tertiary)] mt-2">
-            {deudasLiquidadas.length} liquidadas
+        <div className="surface p-5">
+          <p className="text-label">Liquidadas</p>
+          <p className="mt-2 text-[24px] text-sage-700 font-semibold font-numeric">
+            {deudasLiquidadas.length}
           </p>
+          <p className="mt-1 text-[12px] text-ink-400">ya libres</p>
         </div>
-      </div>
+      </section>
 
-      {/* Progress Bar */}
-      <div className="glass-card">
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-sm text-[var(--text-secondary)]">Progreso total</span>
-          <span className="text-sm font-medium text-emerald-400">{totales.porcentajePagado.toFixed(1)}%</span>
-        </div>
-        <div className="progress-bar-bg h-3">
-          <div
-            className="progress-bar-fill progress-green"
-            style={{ width: `${totales.porcentajePagado}%` }}
-          />
-        </div>
-        <div className="flex justify-between mt-2 text-xs text-[var(--text-tertiary)]">
-          <span>{formatMoney(deudaPagada)} pagado</span>
-          <span>{formatMoney(totales.deudaTotal)} restante</span>
-        </div>
-      </div>
-
-      {/* Asesor de Deudas */}
-      <DebtAdvisor />
-
-      {/* Deudas Activas */}
-      <div className="glass-card">
-        <div className="card-header">
-          <div className="card-header-title">
-            <div className="dot bg-red-500" />
-            <span>Deudas Activas</span>
-          </div>
-          <span className="text-sm text-[var(--text-tertiary)]">Ordenadas por prioridad (CAT)</span>
+      {/* Deudas activas */}
+      <section className="surface p-6">
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-[15px] text-ink-900 font-medium">Deudas activas</h2>
+          <p className="text-label">Por prioridad</p>
         </div>
 
-        <div className="space-y-3">
-          {deudasActivas.map((deuda, index) => {
-            const progreso = deuda.saldoInicial > 0
-              ? ((deuda.saldoInicial - deuda.saldoActual) / deuda.saldoInicial) * 100
-              : 0;
-
-            return (
-              <div
-                key={deuda.id}
-                className={`p-4 rounded-xl border transition-all ${
-                  index === 0
-                    ? 'bg-red-500/10 border-red-500/30'
-                    : 'bg-[var(--bg-elevated)] border-transparent hover:border-[var(--border-default)]'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                      index === 0 ? 'bg-red-500 text-white' :
-                      index === 1 ? 'bg-orange-500/20 text-orange-400' :
-                      'bg-[var(--bg-hover)] text-[var(--text-tertiary)]'
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="font-medium text-white">{deuda.nombre}</p>
-                      <p className="text-xs text-[var(--text-tertiary)] capitalize">{deuda.titular}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-white">{formatMoney(deuda.saldoActual)}</p>
-                    <div className="flex items-center gap-2 justify-end mt-1">
-                      <span className={`badge text-xs ${
-                        deuda.cat > 100 ? 'badge-danger' :
-                        deuda.cat > 50 ? 'badge-warning' : 'badge-info'
-                      }`}>
-                        CAT {deuda.cat}%
-                      </span>
-                      <span className="text-xs text-[var(--text-tertiary)]">
-                        Min: {formatMoney(deuda.pagoMinimo)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress bar individual */}
-                <div className="progress-bar-bg h-1.5">
-                  <div
-                    className={`progress-bar-fill ${index === 0 ? 'progress-red' : 'progress-purple'}`}
-                    style={{ width: `${progreso}%` }}
-                  />
-                </div>
-                <div className="flex justify-between mt-1 text-xs text-[var(--text-tertiary)]">
-                  <span>{progreso.toFixed(0)}% pagado</span>
-                  <span>Inicial: {formatMoney(deuda.saldoInicial)}</span>
-                </div>
-
-                {index === 0 && (
-                  <div className="mt-3 p-2 bg-red-500/20 rounded-lg">
-                    <p className="text-xs text-red-300 flex items-center gap-2">
-                      <AlertTriangle className="w-3 h-3" />
-                      Prioridad #1 - Pagar primero (CAT más alto)
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Deudas Liquidadas */}
-      {deudasLiquidadas.length > 0 && (
-        <div className="glass-card">
-          <div className="card-header">
-            <div className="card-header-title">
-              <div className="dot bg-emerald-500" />
-              <span>Deudas Liquidadas</span>
-            </div>
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-          </div>
-
+        {loading ? (
           <div className="space-y-2">
-            {deudasLiquidadas.map((deuda) => (
-              <div
-                key={deuda.id}
-                className="flex items-center justify-between p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20"
-              >
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  <div>
-                    <p className="font-medium text-emerald-400">{deuda.nombre}</p>
-                    <p className="text-xs text-[var(--text-tertiary)] capitalize">{deuda.titular}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-emerald-400 font-medium">
-                  {formatMoney(deuda.saldoInicial)} liquidado
-                </p>
-              </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 rounded-md bg-subtle animate-pulse" />
             ))}
           </div>
-        </div>
+        ) : deudasActivas.length > 0 ? (
+          <ul className="space-y-3">
+            {deudasActivas.map((deuda, index) => {
+              const progreso =
+                deuda.saldoInicial > 0
+                  ? ((deuda.saldoInicial - deuda.saldoActual) / deuda.saldoInicial) * 100
+                  : 0;
+              const isPriority = index === 0;
+              const catBadge =
+                deuda.cat >= 100 ? 'pill-clay' : deuda.cat >= 60 ? 'pill-honey' : 'pill-ink';
+
+              return (
+                <li
+                  key={deuda.id}
+                  className={`p-4 rounded-lg border transition-colors ${
+                    isPriority
+                      ? 'bg-clay-50 border-clay-100'
+                      : 'bg-surface border-ink-100 hover:border-ink-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0 ${
+                          isPriority
+                            ? 'bg-clay-500 text-white'
+                            : 'bg-subtle text-ink-500'
+                        }`}
+                      >
+                        {index + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[15px] text-ink-900 font-medium truncate">
+                          {deuda.nombre}
+                        </p>
+                        <p className="text-[12px] text-ink-400 capitalize">{deuda.titular}</p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-[15px] text-ink-900 font-medium tabular-nums">
+                        {formatMoney(deuda.saldoActual)}
+                      </p>
+                      <div className="flex items-center gap-2 justify-end mt-1">
+                        <span className={`pill ${catBadge}`}>CAT {deuda.cat}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="progress-track h-1.5">
+                    <div
+                      className={isPriority ? 'progress-fill progress-fill-danger' : 'progress-fill'}
+                      style={{ width: `${progreso}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1.5 text-[11px] text-ink-400 tabular-nums">
+                    <span>{progreso.toFixed(0)}% pagado</span>
+                    <span>Mínimo {formatMoney(deuda.pagoMinimo)} · inicial {formatMoney(deuda.saldoInicial)}</span>
+                  </div>
+
+                  {isPriority && (
+                    <div className="mt-3 flex items-center gap-2 text-[12px] text-clay-600">
+                      <Flame className="w-3.5 h-3.5" strokeWidth={1.75} />
+                      Prioridad 1 · pagar primero (CAT más alto)
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-[14px] text-ink-400 py-6 text-center">
+            Sin deudas activas. Enhorabuena.
+          </p>
+        )}
+      </section>
+
+      {/* Liquidadas */}
+      {deudasLiquidadas.length > 0 && (
+        <section className="surface p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <CheckCircle2 className="w-4 h-4 text-sage-600" strokeWidth={1.75} />
+            <h2 className="text-[15px] text-ink-900 font-medium">Deudas liquidadas</h2>
+          </div>
+          <ul className="space-y-2">
+            {deudasLiquidadas.map((deuda) => (
+              <li
+                key={deuda.id}
+                className="flex items-center justify-between p-3 rounded-md bg-sage-50 border border-sage-100"
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-4 h-4 text-sage-600" strokeWidth={2} />
+                  <div>
+                    <p className="text-[14px] text-ink-900 font-medium">{deuda.nombre}</p>
+                    <p className="text-[12px] text-ink-500 capitalize">{deuda.titular}</p>
+                  </div>
+                </div>
+                <p className="text-[13px] text-sage-700 font-medium tabular-nums">
+                  {formatMoney(deuda.saldoInicial)} liquidado
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
-      {/* Editor de Deudas */}
-      <DeudaEditor deudas={deudas} />
-
-      {/* Motivational Footer */}
-      <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl text-center">
-        <p className="text-purple-300">
-          Meta: Ser libres de deuda en {fechaLibertad}
-        </p>
-      </div>
+      {/* Link a análisis */}
+      <Link
+        href="/analisis"
+        className="surface p-4 flex items-center justify-between hover:bg-subtle transition-colors group"
+      >
+        <div>
+          <p className="text-[14px] text-ink-900">Ver proyección y plan avalancha</p>
+          <p className="text-[12px] text-ink-400">Simulaciones a 12 meses · intereses ahorrados</p>
+        </div>
+        <ArrowRight className="w-4 h-4 text-ink-300 group-hover:text-ink-500 transition-colors" strokeWidth={1.75} />
+      </Link>
     </div>
   );
 }
