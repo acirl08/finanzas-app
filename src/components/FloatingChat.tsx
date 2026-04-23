@@ -421,41 +421,41 @@ export default function FloatingChat() {
 
   return (
     <>
-      {/* Notificación */}
-
-      {/* Chat Window */}
+      {/* Chat window */}
       {isOpen && (
         <div
-          className={`fixed bottom-24 right-4 lg:right-8 z-50 w-[340px] max-w-[calc(100vw-2rem)] bg-[#1a1a2e] border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden transition-all duration-300 ${
-            isMinimized ? 'h-14' : 'h-[450px]'
-          }`}
+          className={`fixed bottom-24 right-4 lg:right-8 z-50 w-[360px] max-w-[calc(100vw-2rem)] bg-surface border border-ink-100 rounded-xl shadow-lift overflow-hidden transition-all duration-200 ${
+            isMinimized ? 'h-14' : 'h-[480px]'
+          } flex flex-col`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <Bot className="w-4 h-4 text-white" />
+          <div className="flex items-center justify-between px-4 py-3 border-b border-ink-100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-sage-500 flex items-center justify-center">
+                <Bot className="w-3.5 h-3.5 text-white" strokeWidth={2} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Asistente</p>
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  <span className="text-[10px] text-white/50">Online</span>
+                <p className="text-[13px] font-medium text-ink-900 leading-tight">Asistente</p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sage-500" />
+                  <span className="text-[11px] text-ink-400">En línea</span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               <button
                 onClick={() => setIsMinimized(!isMinimized)}
-                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-1.5 rounded-md text-ink-400 hover:text-ink-900 hover:bg-subtle transition-colors"
+                aria-label="Minimizar"
               >
-                <Minimize2 className="w-4 h-4 text-white/60" />
+                <Minimize2 className="w-4 h-4" strokeWidth={1.75} />
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-1.5 rounded-md text-ink-400 hover:text-ink-900 hover:bg-subtle transition-colors"
+                aria-label="Cerrar"
               >
-                <X className="w-4 h-4 text-white/60" />
+                <X className="w-4 h-4" strokeWidth={1.75} />
               </button>
             </div>
           </div>
@@ -464,72 +464,74 @@ export default function FloatingChat() {
             <>
               {/* Notificación inline */}
               {notification && (
-                <div className={`mx-3 mt-2 px-3 py-2 rounded-lg flex items-center gap-2 text-sm ${
-                  notification.type === 'success'
-                    ? 'bg-green-500/20 border border-green-500/30 text-green-400'
-                    : 'bg-red-500/20 border border-red-500/30 text-red-400'
-                }`}>
+                <div
+                  className={`mx-3 mt-2 px-3 py-2 rounded-md flex items-center gap-2 text-[13px] ${
+                    notification.type === 'success'
+                      ? 'bg-sage-50 border border-sage-100 text-sage-700'
+                      : 'bg-clay-50 border border-clay-100 text-clay-600'
+                  }`}
+                >
                   {notification.type === 'success' ? (
-                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
                   ) : (
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
                   )}
                   <span className="truncate">{notification.message}</span>
                 </div>
               )}
 
               {/* Messages */}
-              <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${notification ? 'h-[275px]' : 'h-[320px]'}`}>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {messages.map((message, index) => (
                   <div
                     key={index}
                     className={`flex gap-2 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
                   >
                     <div
-                      className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${
-                        message.role === 'user'
-                          ? 'bg-blue-500'
-                          : 'bg-gradient-to-br from-purple-500 to-pink-500'
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        message.role === 'user' ? 'bg-ink-900' : 'bg-sage-500'
                       }`}
                     >
                       {message.role === 'user' ? (
-                        <User className="w-3 h-3 text-white" />
+                        <User className="w-3 h-3 text-white" strokeWidth={2} />
                       ) : (
-                        <Bot className="w-3 h-3 text-white" />
+                        <Bot className="w-3 h-3 text-white" strokeWidth={2} />
                       )}
                     </div>
                     <div
-                      className={`rounded-xl px-3 py-2 max-w-[85%] ${
+                      className={`rounded-lg px-3 py-2 max-w-[85%] ${
                         message.role === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white/10 text-white'
+                          ? 'bg-ink-900 text-app'
+                          : 'bg-subtle text-ink-900'
                       }`}
                     >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">
+                        {message.content}
+                      </p>
                     </div>
                   </div>
                 ))}
                 {isLoading && (
                   <div className="flex gap-2">
-                    <div className="w-6 h-6 rounded-md flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500">
-                      <Bot className="w-3 h-3 text-white" />
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-sage-500 mt-0.5">
+                      <Bot className="w-3 h-3 text-white" strokeWidth={2} />
                     </div>
-                    <div className="bg-white/10 rounded-xl px-3 py-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                    <div className="bg-subtle rounded-lg px-3 py-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-ink-500" />
                     </div>
                   </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick Actions */}
+              {/* Quick actions */}
               {messages.length <= 2 && (
-                <div className="px-4 pb-2 flex gap-2 flex-wrap">
-                  {quickActions.map((action, i) => (
+                <div className="px-3 pb-2 flex gap-1.5 flex-wrap">
+                  {quickActions.slice(0, 4).map((action, i) => (
                     <button
                       key={i}
                       onClick={() => setInput(action)}
-                      className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-colors"
+                      className="text-[11px] px-2.5 py-1 bg-subtle hover:bg-ink-100 rounded-full text-ink-500 hover:text-ink-900 transition-colors"
                     >
                       {action}
                     </button>
@@ -538,22 +540,23 @@ export default function FloatingChat() {
               )}
 
               {/* Input */}
-              <form onSubmit={handleSubmit} className="p-3 border-t border-white/10">
+              <form onSubmit={handleSubmit} className="p-3 border-t border-ink-100">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Escribe tu mensaje..."
-                    className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
+                    placeholder="Escribe tu mensaje…"
+                    className="field text-[14px]"
                     disabled={isLoading}
                   />
                   <button
                     type="submit"
                     disabled={isLoading || !input.trim()}
-                    className="px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-white disabled:opacity-50 hover:opacity-90 transition-opacity"
+                    className="btn btn-primary px-3"
+                    aria-label="Enviar"
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-4 h-4" strokeWidth={2} />
                   </button>
                 </div>
               </form>
@@ -562,17 +565,15 @@ export default function FloatingChat() {
         </div>
       )}
 
-      {/* Floating Button with Tooltip */}
+      {/* Floating button */}
       <div className="fixed bottom-6 right-4 lg:right-8 z-50">
-        {/* Tooltip - only show when chat is closed and no messages sent */}
         {!isOpen && messages.length <= 1 && (
           <div className="absolute bottom-full right-0 mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="bg-[#1a1a2e] border border-purple-500/30 rounded-xl px-4 py-2 shadow-xl shadow-purple-500/20 whitespace-nowrap">
-              <p className="text-sm text-white font-medium">💬 "Gasté $80 en café"</p>
-              <p className="text-xs text-white/50 mt-0.5">Escríbelo como si fuera WhatsApp</p>
+            <div className="bg-surface border border-ink-100 rounded-lg px-3.5 py-2 shadow-lift whitespace-nowrap">
+              <p className="text-[13px] text-ink-900 font-medium">"Gasté $80 en café"</p>
+              <p className="text-[11px] text-ink-400 mt-0.5">Escríbelo como si fuera WhatsApp</p>
             </div>
-            {/* Arrow */}
-            <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-[#1a1a2e] border-r border-b border-purple-500/30 transform rotate-45" />
+            <div className="absolute -bottom-1.5 right-5 w-3 h-3 bg-surface border-r border-b border-ink-100 transform rotate-45" />
           </div>
         )}
 
@@ -581,19 +582,20 @@ export default function FloatingChat() {
             setIsOpen(!isOpen);
             setIsMinimized(false);
           }}
-          className={`relative w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-105 ${
+          aria-label={isOpen ? 'Cerrar chat' : 'Abrir chat'}
+          className={`relative w-12 h-12 rounded-full shadow-lift flex items-center justify-center transition-transform hover:scale-[1.03] ${
             isOpen
-              ? 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-black/20'
-              : 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-purple-500/30'
+              ? 'bg-surface border border-ink-200 text-ink-900'
+              : 'bg-sage-500 text-white hover:bg-sage-600'
           }`}
         >
           {isOpen ? (
-            <X className="w-6 h-6 text-white" />
+            <X className="w-5 h-5" strokeWidth={2} />
           ) : (
             <>
-              <MessageCircle className="w-6 h-6 text-white" />
+              <MessageCircle className="w-5 h-5" strokeWidth={2} />
               {hasUnread && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border-2 border-[#0A0F1C]">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-clay-500 rounded-full flex items-center justify-center text-[10px] text-white font-semibold border-2 border-app">
                   1
                 </span>
               )}
